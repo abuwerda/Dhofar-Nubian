@@ -142,6 +142,11 @@ percentage_table <- df_filtered %>%
   summarize(count = n()) %>%
   mutate(percentage = count / sum(count) * 100)
 
+percentage_table <- df_filtered %>%
+  group_by(Site, Art_Type) %>%
+  summarize(count = n()) %>%
+  mutate(percentage = count / sum(count) * 100)
+
 # Create a bar plot
 ggplot(percentage_table, aes(x = Site, y = percentage, fill = Core_Type_Simple)) +
   geom_bar(stat = "identity", position = "stack") +
