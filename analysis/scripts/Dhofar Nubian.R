@@ -51,7 +51,6 @@ custom_labels=c(
 ggplot(data = df %>% filter(!is.na(Core_Type_Simple))) +
   geom_histogram(aes(y = ..count.., x = Patination, fill = as.factor(Patination)),
                  color = "black", binwidth = 1) +
-  geom_density(aes(y = ..count.., x = Patination), color = 2) +
   scale_fill_manual(values = color_mapping) +
   theme_classic() +
   scale_x_continuous(breaks = seq(1,7, by = 1)) +
@@ -125,3 +124,29 @@ plot = ggplot(df %>% filter(Art_Type == "Lev_Nub", Condition == "complete", Site
   scale_fill_manual(values = color_mapping) +
   theme_classic()
 plot
+
+
+
+## Plots for counts and percentages
+
+library(tidyverse)
+
+# Filter out NA values from Core_Type_Simple
+df_filtered <- df %>%
+  filter(!is.na(Core_Type_Simple))
+
+# Calculate percentages
+percentage_table <- df_filtered %>%
+  group_by(Site, Core_Type_Simple) %>%
+  summarize(count = n()) %>%
+  mutate(percentage = count / sum(count) * 100)
+
+# Create a bar plot
+ggplot(percentage_table, aes(x = Site, y = percentage, fill = Core_Type_Simple)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Percentage of Core_Type_Simple by Site", x = "Site", y = "Percentage") +
+  theme_minimal() +
+  theme(legend.title = element_blank())
+
+
+
