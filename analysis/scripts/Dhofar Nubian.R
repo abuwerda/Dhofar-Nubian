@@ -27,7 +27,8 @@ options(warn = -1)
 
 data = read_csv("analysis/data/raw_data/DN_Database_20240808.csv")
 df = data %>%
-  select(c("Site", "Art_Type", "Art_Class", "Max_Length", "Core_Type_Simple", "Lev_Scar_Length", "Condition", "Patination", "Dissolution"))
+  select(c("Site", "Art_Type", "Art_Class", "Max_Length", "Core_Type_Simple", "Lev_Scar_Length", "Condition", "Patination", "Dissolution")) %>%
+  filter(Art_Class == "core")
 
 ## Color Palette
 virdis_colors = viridis(7, option = "D", direction = -1)
@@ -148,5 +149,27 @@ ggplot(percentage_table, aes(x = Site, y = percentage, fill = Core_Type_Simple))
   theme_minimal() +
   theme(legend.title = element_blank())
 
+
+
+### One table for each site
+
+library(tidyverse)
+
+# Calculate percentages of Art_Type by Patination for each Site
+percentage_table <- df %>%
+  group_by(Site, Patination, Art_Type) %>%
+  summarize(count = n()) %>%
+  mutate(percentage = count / sum(count) * 100)
+
+# Create a bar plot with facets per site
+ggplot(percentage_table, aes(x = Patination, y = percentage, fill = Art_Type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(title = "Percentage of Art_Type by Patination for Each Site",
+       x = "Patination",
+       y = "Percentage") +
+  facet_wrap(~ Site) +
+  theme_minimal() +
+  theme(legend.title = element_blank(),
+        axis.text.x = element_text(angle = 45, hjust = 1))
 
 
