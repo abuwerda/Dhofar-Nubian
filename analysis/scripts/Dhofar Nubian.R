@@ -1,0 +1,127 @@
+## Global options
+
+library(ggpubr)
+library(knitr)
+library(tidyverse)
+library(kableExtra)
+library(ggsci)
+library(plotly)
+library(viridis)
+
+knitr::opts_chunk$set(
+  cache = TRUE,
+  echo = FALSE,
+  fig.pos = "!H",
+  message = FALSE,
+  warning = FALSE,
+  comment = NA,
+  prompt = FALSE
+)
+
+options(knitr.table.format = "markdown")
+options(qwraps2_markup = "markdown")
+options(tinytex.verbose = TRUE)
+options(warn = -1)
+
+## The dataset and markdown files are in the same directory
+
+data = read_csv("/Users/rosej/Library/CloudStorage/Dropbox/Documents/My Publications/Nubian Diachronic/R/DN_Database_20240808.csv")
+df = data %>%
+  select(c("Site", "Art_Type", "Art_Class", "Max_Length", "Core_Type_Simple", "Lev_Scar_Length", "Condition", "Patination", "Dissolution"))
+
+## Color Palette
+virdis_colors = viridis(7, option = "D", direction = -1)
+color_mapping = setNames(virdis_colors, as.character(1:7))
+
+## Figure counter to track the figure number
+figure_counter = 1
+sup_figure_counter = 1
+
+## Descriptive Statistics
+
+## Techno Histograms
+
+custom_labels=c(
+  bi="Bidirectional",
+  Lev_Nub="Nubian Levallois",
+  Lev_other="Other Levallois",
+  uni_blade="Blade"
+)
+
+ggplot(data = df %>% filter(!is.na(Core_Type_Simple))) +
+  geom_histogram(aes(y = ..count.., x = Patination, fill = as.factor(Patination)),
+                 color = "black", binwidth = 1) +
+  geom_density(aes(y = ..count.., x = Patination), color = 2) +
+  scale_fill_manual(values = color_mapping) +
+  theme_classic() +
+  scale_x_continuous(breaks = seq(1,7, by = 1)) +
+  labs(fill = "Patina Stage", y = "artifact count", x = "") +
+  facet_wrap(~Core_Type_Simple, scales = "free_y", labeller=as_labeller(custom_labels))
+
+## Complete Nubian Core & Product Metric Box Plots
+
+plot = ggplot(df %>% filter(Art_Type == "Lev_Nub", Condition == "complete", Site != "TH.069"),
+                aes(x = as.factor(Patination), y = Max_Length,
+                    fill = as.factor(Patination))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 1) +
+  labs(x = "", y = "length (mm)",
+       fill="Patina Stage") +
+  scale_fill_manual(values = color_mapping) +
+  theme_classic()
+plot
+
+plot = ggplot(df %>% filter(Art_Type == "Lev_Nub", Condition == "complete", Site != "TH.069"),
+              aes(x = as.factor(Dissolution), y = Max_Length,
+                  fill = as.factor(Dissolution))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 1) +
+  labs(x = "", y = "length (mm)",
+       fill="Dissolution Stage") +
+  scale_fill_manual(values = color_mapping) +
+  theme_classic()
+plot
+
+plot = ggplot(df %>% filter(Art_Type == "blank_Lev", Condition == "complete", Site != "TH.069"),
+              aes(x = as.factor(Patination), y = Max_Length,
+                  fill = as.factor(Patination))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 1) +
+  labs(x = "", y = "length (mm)",
+       fill="Patina Stage") +
+  scale_fill_manual(values = color_mapping) +
+  theme_classic()
+plot
+
+plot = ggplot(df %>% filter(Art_Type == "blank_Lev", Condition == "complete", Site != "TH.069"),
+              aes(x = as.factor(Dissolution), y = Max_Length,
+                  fill = as.factor(Dissolution))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 1) +
+  labs(x = "", y = "length (mm)",
+       fill="Dissolution Stage") +
+  scale_fill_manual(values = color_mapping) +
+  theme_classic()
+plot
+
+plot = ggplot(df %>% filter(Art_Type == "Lev_Nub", Condition == "complete", Site != "TH.069"),
+              aes(x = as.factor(Patination), y = Lev_Scar_Length,
+                  fill = as.factor(Patination))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 1) +
+  labs(x = "", y = "length (mm)",
+       fill="Patina Stage") +
+  scale_fill_manual(values = color_mapping) +
+  theme_classic()
+plot
+
+plot = ggplot(df %>% filter(Art_Type == "Lev_Nub", Condition == "complete", Site != "TH.069"),
+              aes(x = as.factor(Dissolution), y = Lev_Scar_Length,
+                  fill = as.factor(Dissolution))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 1) +
+  labs(x = "", y = "length (mm)",
+       fill="Dissolution Stage") +
+  scale_fill_manual(values = color_mapping) +
+  theme_classic()
+plot
