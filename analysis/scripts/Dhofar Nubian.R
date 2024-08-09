@@ -25,7 +25,7 @@ options(warn = -1)
 
 ## The dataset and markdown files are in the same directory
 
-data = read_csv("/Users/rosej/Library/CloudStorage/Dropbox/Documents/My Publications/Nubian Diachronic/R/DN_Database_20240808.csv")
+data = read_csv("analysis/data/raw_data/DN_Database_20240808.csv")
 df = data %>%
   select(c("Site", "Art_Type", "Art_Class", "Max_Length", "Core_Type_Simple", "Lev_Scar_Length", "Condition", "Patination", "Dissolution"))
 
