@@ -1,0 +1,4783 @@
+---
+title: "Dhofar Nubian Tradition"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::robobook:
+    highlight: kate
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(ggpubr)
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(kableExtra)
+library(car)
+library(ggsci)
+library(ggtern)
+library(dunn.test)
+library(viridis)
+library(RColorBrewer)
+library(dunn.test)
+library(ggpmisc)
+library(broom)
+library(ggtext)
+library(purrr)
+
+set.seed(132)
+setwd("") # Set your working directory. In order for the ggsave feature to work, you must have a sub-folder in your working directory called "Figures" and within this two sub-folders called "MS" (which stores figures from the main text) and "SI" (which stores figures from the supplementary information).
+
+knitr::opts_chunk$set(
+  cache = TRUE,
+  echo = FALSE,
+  fig.pos = "!H",
+  message = FALSE,
+  warning = FALSE,
+  comment = NA,
+  prompt = FALSE
+)
+
+options(knitr.table.format = "markdown")
+options(qwraps2_markup = "markdown")
+options(tinytex.verbose = TRUE)
+options(warn = -1)
+
+df = read_csv("DN_Database_20250309.csv")
+df_filtered <- df %>%
+  filter() %>%
+  select(c("Site", "Site_Short", "Collection", "Sq_M", "Cluster_3", "Art_Type", "Art_Type_Sub", "Art_Class", "Core_Type_Tern","Condition", "Shape", "Nub_Distal_Prep", "Nub_MDR_Angle", "Scar_Pattern", "Primary_Plat", "Core_Back", "Lev_Scar", "Tool_Type", "Max_Length", "Max_Width", "Max_Thick", "Plat_Width", "Plat_Height", "Lev_Scar_Length", "Lev_Scar_Width", "Lev_Scar_Size", "TCSA", "TCSP", "Geo_Mean", "Condition", "Patination", "Dissolution", "Index_E", "Index_F", "Lev_Scar_Index_E", "Size"))
+
+# Color Palette
+virdis_colors = viridis(7, option = "D", direction = -1)
+color_mapping = setNames(virdis_colors, as.character(1:7))
+
+```
+# Total assemblages
+
+## Raw counts
+
+__Table 1: Data table of artifact class by site__ 
+```{r}
+result_cluster <- df_filtered %>%
+  group_by(Site, Art_Class) %>%
+  summarise(Count = n(), .groups = 'drop') %>%
+  group_by(Site) %>% 
+  mutate(Percentage = floor(Count / sum(Count) * 1000) / 10) %>%
+  mutate(Count_Percentage = paste0(Count, " (", round(Percentage, 1), "%)")) %>%
+  select(Site, Art_Class, Count_Percentage)
+total_counts <- df %>%
+  group_by(Site) %>%
+  summarise(Total_Count = n())
+pivot_result_cluster <- result_cluster %>%
+  arrange(Site) %>%
+  pivot_wider(
+    names_from = Art_Class,
+    values_from = Count_Percentage,
+    values_fill = "-" 
+  )
+pivot_result_cluster <- pivot_result_cluster %>%
+  left_join(total_counts, by = "Site")
+pivot_result_cluster
+kable(pivot_result_cluster, caption = "Artifact class by site")
+```
+__Figure S1: Stacked bar plots of artifact class in systematic collections__
+```{r}
+df_systematic <- df_filtered %>%
+  filter(Collection == "systematic")
+percentage_table <- df_systematic %>%
+  group_by(Site, Art_Class) %>%
+  summarize(count = n()) %>%
+  group_by(Site) %>%
+  mutate(percentage = count / sum(count) * 100)
+art_class_systematic <- ggplot(percentage_table, aes(x = factor(Site), y = percentage, fill = Art_Class)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(
+    aes(label = ifelse(percentage > 4.9, paste0(round(percentage, 1), "%\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3.5
+  ) +
+  labs(x = "", y = "%", color = "Artifact Class", fill = "Artifact Class") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 17, angle = 45, hjust = 1, face = "bold"),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  ) +
+  scale_fill_brewer(palette = "Set3")
+art_class_systematic
+ggsave("Figures/SI/S1-art_class_systematic.png", plot = art_class_systematic, width = 12, height = 8)
+```
+__Figure S2: Stacked bar plots of artifact class in piece plot collections__
+```{r}
+df_diagnostic <- df_filtered%>%
+  filter(Collection == "diagnostic")
+percentage_table <- df_diagnostic %>%
+  group_by(Site, Art_Class) %>%
+  summarize(count = n()) %>%
+  group_by(Site) %>%
+  mutate(percentage = count / sum(count) * 100)
+art_class_piece_plot <- ggplot(percentage_table, aes(x = factor(Site), y = percentage, fill = Art_Class)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(
+    aes(label = ifelse(percentage > 4.9, paste0(round(percentage, 1), "%\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3.5
+  ) +
+  labs(x = "", y = "%", fill = "Artifact Class") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 17, angle = 45, hjust = 1, face = "bold"),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y  = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  ) +
+  scale_fill_brewer(palette = "Set3")
+art_class_piece_plot
+ggsave("Figures/SI/S2-art_class_piece_plot.png", plot = art_class_piece_plot, width = 12, height = 8)
+```
+## Ratios
+
+__Figure S3: Artifact density__
+```{r}
+artifact_counts <- df_filtered %>%
+  group_by(Site, Cluster_3) %>%
+  summarize(artifact_count = n(),
+            Sq_M = first(Sq_M))
+artifact_counts <- artifact_counts %>%
+  mutate(artifact_density = artifact_count / Sq_M)
+art_density_systematic <- ggplot(artifact_counts, aes(x = Site, y = artifact_density, fill = as.factor(Cluster_3))) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(artifact_density, 1)),
+            vjust = -0.5, size = 3.5) +
+scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  labs(title = "",
+       x = "",
+       y = "artifacts per sq m",
+       fill = "Cluster"
+       ) +
+ theme(
+    axis.text.x = element_text(size = 17, angle = 45, hjust = 1, face = "bold"),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  )
+art_density_systematic
+ggsave("Figures/SI/S3-art_density_systematic.png", plot = art_density_systematic, width = 12, height = 8)
+```
+__Figure S4: Ratio of Nubian products to Nubian cores__
+```{r}
+artifact_counts <- df_filtered %>%
+  group_by(Site, Cluster_3) %>%
+  summarize(
+    lev_nub_count = sum(Art_Type == "Lev_Nub", Art_Type == "Lev_cent", Art_Type == "Lev_conv"),
+    point_lev_count = sum(Art_Type == "Nubian")
+  ) %>%
+  mutate(point_lev_to_lev_nub_ratio = ifelse(lev_nub_count == 0, NA, point_lev_count / lev_nub_count))
+lev_point_ratio <- ggplot(artifact_counts, aes(x = Site, y = point_lev_to_lev_nub_ratio, fill = as.factor(Cluster_3))) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = ifelse(is.na(point_lev_to_lev_nub_ratio), "NA", round(point_lev_to_lev_nub_ratio, 2))),
+            vjust = -0.5, size = 3) +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  labs(
+       x = "",
+       y = "Nubian products /  Nubian cores",
+       fill = "Cluster") +
+  theme(
+    axis.text.x = element_text(size = 17, angle = 45, hjust = 1, face = "bold"),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  )
+lev_point_ratio
+ggsave("Figures/SI/S4-lev_point_ratio.png", plot = lev_point_ratio, width = 12, height = 8)
+```
+__Figure S5: Ratio of retouched tools to cores__
+```{r}
+artifact_counts <- df_filtered %>%
+  group_by(Site, Cluster_3) %>%
+  summarize(
+    tool = sum(Art_Class == "tool" & Tool_Type != "Levallois_blank"),
+    core = sum(Art_Class == "core" & Art_Type != "indeterm")
+  ) %>%
+  mutate(tool_to_core_ratio = ifelse(tool == 0, NA, tool / core))
+tool_core_ratio <- ggplot(artifact_counts, aes(x = Site, y = tool_to_core_ratio, fill = as.factor(Cluster_3))) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = ifelse(is.na(tool_to_core_ratio), "NA", round(tool_to_core_ratio, 2))),
+            vjust = -0.5, size = 3) +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  labs(
+       x = "",
+       y = "tools / cores",
+       fill = "Cluster") +
+  theme(
+    axis.text.x = element_text(size = 17, angle = 45, hjust = 1, face = "bold"),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  )
+tool_core_ratio
+ggsave("Figures/SI/S5-tool_core_ratio.png", plot = tool_core_ratio, width = 12, height = 8)
+```
+__Figure S6: Ratio of debitage to cores__
+```{r}
+artifact_counts <- df_filtered %>%
+  group_by(Site, Cluster_3) %>%
+  summarize(
+    debitage = sum(Art_Class == "debitage"),
+    core = sum(Art_Class == "core")
+  ) %>%
+  mutate(debitage_core_ratio = ifelse(core == 0, NA, debitage / core))
+debitage_core_ratio <- ggplot(artifact_counts, aes(x = Site, y = debitage_core_ratio, fill = as.factor(Cluster_3))) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label = round(debitage_core_ratio, 2)),
+            vjust = -0.5, size = 3) +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  labs(
+       x = "",
+       y = "debitage / cores",
+       fill = "Cluster") +
+  theme(
+    axis.text.x = element_text(size = 17, angle = 45, hjust = 1, face = "bold"),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  )
+debitage_core_ratio
+ggsave("Figures/SI/S6-debitage_core_ratio.png", plot = debitage_core_ratio, width = 12, height = 8)
+```
+# Patination Score Analysis
+
+## Summary for all sites
+
+__Weighted patination scores for each site__
+```{r}
+df_patination <- df_filtered %>%
+  filter(!is.na(Patination))
+weighted_scores <-df_filtered %>%
+  group_by(Site, Patination) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  group_by(Site) %>%
+  summarise(
+    total_count = sum(count),
+    weighted_score = round(sum(Patination * count) / total_count, 1)
+  )
+print(weighted_scores)
+```
+__Figure 2: Histograms of patination scores per site__
+```{r}
+patina_histograms <- ggplot(data = df_filtered %>% filter(!is.na(Patination))) +
+  geom_histogram(aes(y = after_stat(count), x = Patination, fill = as.factor(Patination)),
+                 color = "black", binwidth = 1) +
+  scale_fill_manual(values = color_mapping) +
+  theme_classic() +
+  scale_x_continuous(breaks = seq(1, 7, by = 1)) +
+  labs(fill = "patination score", y = "artifact count", x = "patination score") +
+  facet_wrap(~Site, scales = "free_y") +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(size = 13),
+    axis.title.x =element_text(size = 17),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17),
+    strip.text = element_text(size = 15, face = "bold")
+    )
+patina_histograms
+ggsave("Figures/MS/2-patina_histograms.png", plot = patina_histograms, width = 12, height = 8)
+```
+__Figure S7: Stacked bar plot core type % by patination score per site__
+```{r}
+df_corepatina <- df_filtered %>%
+  filter(Art_Class == "core", Art_Type != "pre-core&indeterm", !is.na(Patination))
+percentage_table <- df_corepatina %>%
+  group_by(Site, Patination, Art_Type) %>%
+  summarize(count = n()) %>%
+  mutate(percentage = count / sum(count) * 100)
+percentage_table <- percentage_table %>%
+  group_by(Site, Patination) %>%
+  mutate(cum_percentage = cumsum(percentage) - percentage / 2)
+core_type_patination <- ggplot(percentage_table, aes(x = factor(Patination), y = percentage, fill = Art_Type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(
+    aes(label = ifelse(percentage > 4.9, paste0(round(percentage, 1), "%\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 2.5
+  ) +
+  labs(x = "patination score",
+       y = "%",
+      fill = "Core Type"
+      ) +
+  facet_wrap(~ Site) +
+  theme_minimal() +
+  theme(
+    axis.title = element_text(size = 17),
+    legend.position = "right",
+    axis.text = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17),
+    strip.text = element_text(size = 15, face = "bold")
+  ) +
+  scale_fill_brewer(palette = "Set3") +
+  scale_fill_manual(
+    values = c(
+      "bi" = "#8DD3C7",
+      "Kombewa" = "#FFFFB3",
+      "Lev_cent" = "#BEBADA",
+      "Lev_conv" = "#FB8072",
+      "Lev_indeterm" = "#80B1D3",
+      "Lev_Nub" = "#FDB462",
+      "ortho&crossed" = "#B3DE69",
+      "radial&multi-plat" = "#FCCDE5",
+      "uni_blade" = "#D9D9D9",
+      "uni_flake" = "#BC80BD"
+    ),
+    labels = c(
+      "bi" = "bidirectional",
+      "Kombewa" = "Kombewa",
+      "Lev_cent" = "centripetal Levallois",
+      "Lev_conv" = "convergent Levallois",
+      "Lev_indeterm" = "indeterminate preferential",
+      "Lev_Nub" = "Nubian",
+      "ortho&crossed" = "orthogonal & crossed",
+      "radial&multi-plat" = "radial & multiple platform",
+      "uni_blade" = "unidirectional, blade",
+      "uni_flake" = "unidirectional, flake"
+    )
+  )
+core_type_patination
+ggsave("Figures/SI/S7-core_type_patination.png", plot = core_type_patination, width = 12, height = 8)
+```
+__Figure S8: Boxplots of geo mean organized by patina score__
+```{r}
+cores_patina_geo_mean <- ggplot(
+  df_filtered %>%
+    mutate(Site = factor(Site, levels = unique(Site[order(Cluster_3)]))) %>%
+    filter(
+      !is.na(Patination),
+      Art_Class == "core",
+      !is.na(Geo_Mean),
+      !(Site %in% c("TH.187", "TH.188", "TH.123"))
+    ),
+  aes(
+    x = as.factor(Patination), 
+    y = Geo_Mean,
+    fill = as.factor(Patination)
+  )
+) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(
+    x = "patination score",
+    y = "geometric mean (mm)",
+    fill = "patination score",
+    title = ""
+  ) +
+  scale_fill_manual(values = color_mapping) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(size = 13),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17),
+    axis.title.x = element_text(size = 17),
+    strip.text.x = element_text(size = 15, face = "bold")
+  ) +
+   facet_wrap(~ Site, scales = "fixed")
+cores_patina_geo_mean
+ggsave("Figures/SI/S8-cores_patina_geo_mean_fixed.png", plot = cores_patina_geo_mean, width = 12, height = 8)
+```
+## Cluster Analysis
+
+__Figure 3: Violin plot of patination scores by site with three-centroid cluster analysis__
+```{r}
+set.seed(132)
+patination_distribution <- df_filtered %>%
+  filter(!is.na(Patination)) %>%
+  group_by(Site, Patination) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  complete(Site, Patination = 1:7, fill = list(count = 0)) %>%
+  group_by(Site) %>%
+  mutate(proportion = count / sum(count)) %>%
+  select(-count) %>%
+  pivot_wider(names_from = Patination, values_from = proportion, values_fill = list(proportion = 0))
+patination_matrix <- as.matrix(patination_distribution[,-1])
+kmeans_result <- kmeans(patination_matrix, centers = 3)
+df_filtered <- df_filtered %>%
+  mutate(Cluster = factor(kmeans_result$cluster[match(Site, patination_distribution$Site)], 
+                          levels = c(3, 2, 1), labels = c("I", "II", "III")),
+         Site = as.factor(Site)) %>%
+  arrange(Cluster)
+cluster_colors <- c("I" = "#A6CEE3", "II" = "#1F78B4", "III" = "#B2DF8A")
+site_order <- df_filtered %>%
+  group_by(Site) %>%
+  summarize(median_patination = median(Patination, na.rm = TRUE)) %>%
+  arrange(desc(median_patination)) %>%
+  pull(Site)
+site_order <- as.character(site_order)
+index_069 <- which(site_order == "TH.069")
+index_076 <- which(site_order == "TH.076")
+site_order[c(index_069, index_076)] <- site_order[c(index_076, index_069)]
+violin_plot <- ggplot(df_filtered, aes(x = factor(Site, levels = site_order), y = Patination, fill = Cluster)) +
+  geom_violin(trim = FALSE, scale = "width") +
+  scale_fill_manual(values = cluster_colors) +
+  scale_y_continuous(breaks = seq(min(df_filtered$Patination, na.rm = TRUE), max(df_filtered$Patination, na.rm = TRUE), by = 1)) +
+  theme_minimal() +
+  labs(title = "",
+       x = "",
+       y = "Patination Score",
+       fill = "Cluster") +
+  theme(
+    axis.text.x = element_text(size = 17, angle = 45, vjust = 0.5, hjust = 1, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.key = element_rect(color = "black", linewidth = 0.0)
+  )
+violin_plot
+ggsave("Figures/MS/3-violin_plot.png", plot = violin_plot, width = 12, height = 8)
+```
+__Kruskal-Wallis and Dunn's Tests__
+```{r}
+kruskal_test <- kruskal.test(Patination ~ Cluster_3, data = df_filtered)
+print(kruskal_test)
+dunn_results <- dunn.test(df_patination$Patination, df_patination$Cluster_3, kw = TRUE, label = TRUE)
+dunn_results_adjusted <- dunn_results$res
+dunn_results_adjusted$Adjusted_P_Value <- p.adjust(dunn_results_adjusted$p.value, method = "bonferroni")
+print(dunn_results_adjusted)
+```
+# All core types
+
+## Raw counts
+
+__Data table of core types by site__ 
+```{r}
+result <- df_filtered %>%
+  filter(Art_Class == "core") %>%
+  group_by(Site, Art_Type) %>%
+  summarise(Count = n()) %>%
+  mutate(Percentage = Count / sum(Count) * 100) %>%
+  mutate(Count_Percentage = paste0(Count, " (", round(Percentage, 2), "%)")) %>%
+  select(Site, Art_Type, Count_Percentage)
+pivot_result <- result %>%
+  arrange(Art_Type) %>%
+  pivot_wider(names_from = Site, values_from = Count_Percentage, values_fill = "-") %>%
+  select(Art_Type, order(as.numeric(gsub("[^0-9]", "", names(.)))))
+pivot_result
+kable(pivot_result, caption = "Core types by site")
+```
+__Data table of core types by cluster__ 
+```{r}
+result_cluster <- df_filtered %>%
+  filter(Art_Class == "core") %>%
+  group_by(Cluster_3, Art_Type) %>%
+  summarise(Count = n(), .groups = 'drop') %>%
+  group_by(Cluster_3) %>% 
+  mutate(Percentage = Count / sum(Count) * 100) %>%
+  mutate(Count_Percentage = paste0(Count, " (", round(Percentage, 1), "%)")) %>%
+  select(Cluster_3, Art_Type, Count_Percentage)
+pivot_result_cluster <- result_cluster %>%
+  arrange(Art_Type) %>%
+  pivot_wider(
+    names_from = Cluster_3,
+    values_from = Count_Percentage,
+    values_fill = "-"
+  ) %>%
+  select(Art_Type, `I`, `II`, `III`) 
+pivot_result_cluster
+kable(pivot_result_cluster, caption = "Core types by cluster")
+```
+__Table 2: Data table of core types by site and cluster__ 
+```{r}
+process_totals_with_percentages_by_column <- function(cluster_name) {
+  processed_data <- df_filtered %>%
+    filter(Art_Class == "core", Cluster_3 == cluster_name) %>%
+    group_by(Site, Art_Type) %>%
+    summarise(Total_Count = n(), .groups = 'drop') %>%
+    arrange(Art_Type) %>%
+    pivot_wider(
+      names_from = Site,
+      values_from = Total_Count,
+      values_fill = 0
+    )
+  processed_data_with_totals <- processed_data %>%
+    rowwise() %>%
+    mutate(Total = sum(c_across(starts_with("TH")), na.rm = TRUE)) %>%
+    ungroup()
+  processed_data_with_percentages <- processed_data_with_totals %>%
+    mutate(
+      across(
+        .cols = starts_with("TH"),
+        .fns = ~ paste0(.x, " (", round(.x / sum(.x, na.rm = TRUE) * 100, 1), "%)")
+      )
+    )
+  final_table <- processed_data_with_percentages %>%
+    select(Art_Type, everything()) %>%
+    relocate(Total, .after = last_col())
+  return(final_table)
+}
+totals_with_percentages_cluster_3_I <- process_totals_with_percentages_by_column("I")
+totals_with_percentages_cluster_3_II <- process_totals_with_percentages_by_column("II")
+totals_with_percentages_cluster_3_III <- process_totals_with_percentages_by_column("III")
+kable(totals_with_percentages_cluster_3_I, caption = "Core types by cluster - I")
+kable(totals_with_percentages_cluster_3_II, caption = "Core types by cluster - II")
+kable(totals_with_percentages_cluster_3_III, caption = "Core types by cluster - III")
+```
+__Figure S9: Stacked bar plot of total core counts per site__
+```{r}
+df_cores <- df_filtered %>%
+  filter(Art_Class == "core",
+         Art_Type != "pre-core&indeterm")
+count_table <- df_cores %>%
+  group_by(Site, Art_Type, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop') %>%
+  group_by(Site) %>%
+  mutate(total_count = sum(count),
+         percentage = (count / total_count) * 100)
+count_table <- count_table %>%
+  mutate(Site = factor(Site, levels = unique(Site)))
+site_positions <- levels(count_table$Site)
+total_cores_site <- ggplot(count_table %>% droplevels(), aes(x = Site, y = percentage, fill = Art_Type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(
+    aes(label = ifelse(percentage > 4.9, paste0(round(percentage, 1), "%\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3.5
+  ) +
+  scale_x_discrete(labels = function(x) str_wrap(x, width = 10)) +
+  labs(x = "",
+       y = "percentage",
+      fill = "Core Type") +
+  facet_wrap(~ Cluster_3, scales = "free_x") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 17, angle = 45, hjust = 1, face = "bold"),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17),
+    strip.text = element_text(size = 15, face = "bold")
+  ) +
+  scale_fill_brewer(palette = "Set3") +
+  scale_fill_manual(
+    values = c(
+      "bi" = "#8DD3C7",
+      "Kombewa" = "#FFFFB3",
+      "Lev_cent" = "#BEBADA",
+      "Lev_conv" = "#FB8072",
+      "Lev_indeterm" = "#80B1D3",
+      "Lev_Nub" = "#FDB462",
+      "ortho&crossed" = "#B3DE69",
+      "radial&multi-plat" = "#FCCDE5",
+      "uni_blade" = "#D9D9D9",
+      "uni_flake" = "#BC80BD"
+    ),
+    labels = c(
+      "bi" = "bidirectional",
+      "Kombewa" = "Kombewa",
+      "Lev_cent" = "centripetal Levallois",
+      "Lev_conv" = "convergent Levallois",
+      "Lev_indeterm" = "indeterminate preferential",
+      "Lev_Nub" = "Nubian",
+      "ortho&crossed" = "orthogonal & crossed",
+      "radial&multi-plat" = "radial & multiple platform",
+      "uni_blade" = "unidirectional, blade",
+      "uni_flake" = "unidirectional, flake"
+    )
+  )
+total_cores_site
+ggsave("Figures/SI/S9-total_cores_site.png", plot = total_cores_site, width = 12, height = 8)
+```
+__Figure S10: Stacked bar plot % of total core types per cluster__
+```{r}
+df_cores <- df_filtered %>%
+  filter(Art_Class == "core",
+         Art_Type != "pre-core&indeterm")
+count_table <- df_cores %>%
+  group_by(Cluster_3, Art_Type) %>%
+  summarize(count = n()) %>%
+  mutate(percentage = count / sum(count) * 100)
+total_cores_cluster <- ggplot(count_table, aes(x = Cluster_3, y = percentage, fill = Art_Type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_text(
+    aes(label = ifelse(percentage > 4.9, paste0(round(percentage, 1), "%\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3.5
+  ) +
+  labs(x = "cluster",
+       y = "%",
+       fill = "Core Type") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 17, hjust = 1, face = "bold"),
+    axis.title = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  ) +
+  scale_fill_brewer(palette = "Set3") +
+  scale_fill_manual(
+    values = c(
+      "bi" = "#8DD3C7",
+      "Kombewa" = "#FFFFB3",
+      "Lev_cent" = "#BEBADA",
+      "Lev_conv" = "#FB8072",
+      "Lev_indeterm" = "#80B1D3",
+      "Lev_Nub" = "#FDB462",
+      "ortho&crossed" = "#B3DE69",
+      "radial&multi-plat" = "#FCCDE5",
+      "uni_blade" = "#D9D9D9",
+      "uni_flake" = "#BC80BD"
+    ),
+    labels = c(
+      "bi" = "bidirectional",
+      "Kombewa" = "Kombewa",
+      "Lev_cent" = "centripetal Levallois",
+      "Lev_conv" = "convergent Levallois",
+      "Lev_indeterm" = "indeterminate preferential",
+      "Lev_Nub" = "Nubian",
+      "ortho&crossed" = "orthogonal & crossed",
+      "radial&multi-plat" = "radial & multiple platform",
+      "uni_blade" = "unidirectional, blade",
+      "uni_flake" = "unidirectional, flake"
+    )
+  )
+total_cores_cluster
+ggsave("Figures/SI/S10-total_cores_cluster.png", plot = total_cores_cluster, width = 12, height = 8)
+```
+## Reduction strategy summary
+
+__Figure 5: Ternary plot of main reduction strategies by site__
+```{r}
+df_ternary <- df_filtered %>%
+  filter(!is.na(Core_Type_Tern) & Core_Type_Tern != "")
+df_counts <- df_ternary %>%
+  group_by(Site_Short, Cluster_3) %>%
+  summarize(
+    Lev_Nub = sum(Core_Type_Tern == "Lev_Nub"),
+    bi = sum(Core_Type_Tern == "bi"),
+    uni = sum(Core_Type_Tern == "uni")
+  )
+df_proportions <- df_counts %>%
+  mutate(
+    total = Lev_Nub + bi + uni,
+    A = Lev_Nub / total,
+    B = bi / total,
+    C = uni / total,
+    label_x = A - .03,
+    label_y = B - 0.03
+  )
+hulls <- df_proportions %>%
+  group_by(Cluster_3) %>%
+  slice(chull(A, B))
+ternary_reduction <- ggtern(data = df_proportions, aes(x = A, y = B, z = C)) +
+  geom_polygon(data = hulls, aes(x = A, y = B, z = C, fill = Cluster_3), alpha = 0.3, color = "black", linewidth = 0.2) +
+  geom_point(aes(color = Cluster_3), size = 2.5) +
+  geom_text(aes(x = label_x, y = label_y, label = Site_Short), size = 3, color = "black", fontface = "bold", hjust = -0.1) +
+  scale_color_brewer(palette = "Paired") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_ggtern() +
+  labs(title = "",
+       x = "Nubian", y = "Bidirectional", z = "Unidirectional", color = "Cluster", fill = "Cluster") +
+  theme(
+    legend.position = "right",
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 12),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  )
+ternary_reduction
+ggsave("Figures/MS/5-ternary_reduction.png", plot = ternary_reduction, width = 12, height = 8)
+```
+__Chi Square Test of differences in main reduction strategies__
+```{r}
+contingency_table <- df_counts %>%
+  select(-Cluster_3) %>%
+  mutate(across(everything(), as.numeric)) %>%
+  as.matrix()
+contingency_table <- contingency_table[rowSums(contingency_table) > 0, colSums(contingency_table) > 0]
+chisq_test <- chisq.test(contingency_table)
+print(chisq_test)
+```
+__Fisher's Exact Test__
+```{r}
+df_counts <- df_ternary %>%
+  group_by(Cluster_3, Core_Type_Tern) %>%
+  summarize(Count = n(), .groups = 'drop')
+df_wide <- df_counts %>%
+  pivot_wider(names_from = Core_Type_Tern, values_from = Count, values_fill = list(Count = 0))
+pairwise_results <- combn(unique(df_wide$Cluster_3), 2, function(pair) {
+  pair_data <- df_wide %>%
+    filter(Cluster_3 %in% pair) %>%
+    select(-Cluster_3) %>%
+    as.matrix()
+  fisher_test <- fisher.test(pair_data, simulate.p.value = TRUE, B = 10000)
+  list(
+    clusters = pair,
+    p_value = fisher_test$p.value
+  )
+}, simplify = FALSE)
+raw_p_values <- sapply(pairwise_results, function(res) res$p_value)
+adjusted_p_values <- p.adjust(raw_p_values, method = "bonferroni")
+for (i in seq_along(pairwise_results)) {
+  pairwise_results[[i]]$p_adj <- adjusted_p_values[i]
+}
+results_table <- do.call(rbind, lapply(pairwise_results, function(res) {
+  data.frame(
+    Cluster1 = res$clusters[1],
+    Cluster2 = res$clusters[2],
+    P_Value = res$p_value,
+    Adjusted_P_Value = res$p_adj
+  )
+}))
+print(results_table)
+```
+# Nubian Cores
+
+## Descriptive Statistics
+
+_Table S2: Nub core descriptive statistics by site__
+```{r}
+df_lev_nub <- df_filtered %>%
+  filter(Art_Type_Sub == "Lev_Nub")
+descriptive_stats_length_site <- df_lev_nub %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Length, na.rm = TRUE),
+    sd = sd(Max_Length, na.rm = TRUE),
+    min = min(Max_Length, na.rm = TRUE),
+    max = max(Max_Length, na.rm = TRUE)
+  )
+descriptive_stats_width_site <- df_lev_nub %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Width, na.rm = TRUE),
+    sd = sd(Max_Width, na.rm = TRUE),
+    min = min(Max_Width, na.rm = TRUE),
+    max = max(Max_Width, na.rm = TRUE)
+  )
+descriptive_stats_thickness_site <- df_lev_nub %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Thick, na.rm = TRUE),
+    sd = sd(Max_Thick, na.rm = TRUE),
+    min = min(Max_Thick, na.rm = TRUE),
+    max = max(Max_Thick, na.rm = TRUE)
+  )
+kable(descriptive_stats_length_site, caption = "Descriptive Statistics for Max Length by Site")
+kable(descriptive_stats_width_site, caption = "Descriptive Statistics for Max Width by Site")
+kable(descriptive_stats_thickness_site, caption = "Descriptive Statistics for Max Thickness by Site")
+```
+_Table S3: Nub core descriptive statistics by cluster__
+```{r}
+descriptive_stats_length_cluster <- df_lev_nub %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Length, na.rm = TRUE),
+    sd = sd(Max_Length, na.rm = TRUE),
+    min = min(Max_Length, na.rm = TRUE),
+    max = max(Max_Length, na.rm = TRUE)
+  )
+descriptive_stats_width_cluster <- df_lev_nub %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Width, na.rm = TRUE),
+    sd = sd(Max_Width, na.rm = TRUE),
+    min = min(Max_Width, na.rm = TRUE),
+    max = max(Max_Width, na.rm = TRUE)
+  )
+descriptive_stats_thickness_cluster <- df_lev_nub %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Thick, na.rm = TRUE),
+    sd = sd(Max_Thick, na.rm = TRUE),
+    min = min(Max_Thick, na.rm = TRUE),
+    max = max(Max_Thick, na.rm = TRUE)
+  )
+kable(descriptive_stats_length_cluster, caption = "Descriptive Statistics for Max Length by Cluster_3")
+kable(descriptive_stats_width_cluster, caption = "Descriptive Statistics for Max Width by Cluster_3")
+kable(descriptive_stats_thickness_cluster, caption = "Descriptive Statistics for Max Thickness by Cluster_3")
+```
+## Morphology
+
+### Median Distal Ridge (MDR)
+
+__Figure S11: MDR angle box plots by site__
+```{r}
+df_mdr <- df_filtered %>%
+  filter(Art_Type == "Lev_Nub", !is.na(Nub_MDR_Angle)) %>%
+  arrange(Cluster_3, Site)
+site_order <- df_mdr %>%
+  group_by(Site) %>%
+  summarize(mean_angle = mean(Nub_MDR_Angle)) %>%
+  arrange(desc(mean_angle)) %>%
+  pull(Site)
+df_mdr$Site <- factor(df_mdr$Site, levels = site_order)
+MDR_boxplot_site <- ggplot(df_mdr, aes(x = Site, y = Nub_MDR_Angle, fill = Cluster_3)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "MDR angle",
+       fill = "Cluster",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(legend.position = "right",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+MDR_boxplot_site
+ggsave("Figures/SI/S11-MDR_angle_boxplots_site.png", plot = MDR_boxplot_site, width = 12, height = 8)
+```
+__Figure 7: MDR angle box plots by cluster__
+```{r}
+MDR_boxplot_cluster <- ggplot(df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Nub_MDR_Angle)),
+              aes(x = as.factor(Cluster_3), y = Nub_MDR_Angle,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "MDR angle",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.x = element_text(size = 13),
+    axis.title.y = element_text(size = 17),
+    legend.position = "none"
+  )
+MDR_boxplot_cluster
+ggsave("Figures/MS/7-MDR_boxplot_cluster.png", plot = MDR_boxplot_cluster, width = 12, height = 8)
+```
+__MDR boxplot tests__
+```{r}
+df_MDR = df %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Nub_MDR_Angle))
+kruskal_result <- kruskal.test(Nub_MDR_Angle ~ as.factor(Cluster_3), data = df_MDR)
+print(kruskal_result)
+dunn.test(df_MDR$Nub_MDR_Angle, df_MDR$Cluster_3, method = "bonferroni")
+```
+__Figure S12: MDR prep pie charts by cluster__
+```{r}
+df_mdr_p <- df_filtered %>%
+  filter(Art_Type_Sub == "Lev_Nub",
+         Nub_Distal_Prep != "indeterminate",
+         Nub_Distal_Prep != "missing")
+df_mdr_p <- df_mdr_p %>%
+  mutate(Nub_Distal_Prep = factor(Nub_Distal_Prep, levels = c("divergent", "bilateral", "divergent_lateral")))
+data_counts <- df_mdr_p %>%
+  group_by(Cluster_3, Nub_Distal_Prep) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Nub_Distal_Prep, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+custom_labels <- c(
+  "divergent" = "distal divergent (Type 1)",
+  "bilateral" = "bilateral (Type 2)",
+  "divergent_lateral" = "divergent-lateral (Type 1/2)"
+)
+MDR_prep_pie_charts <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Nub_Distal_Prep)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3", labels = custom_labels) +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.099, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+MDR_prep_pie_charts
+ggsave("Figures/SI/S12-MDR_prep_pie_charts.png", plot = MDR_prep_pie_charts, width = 12, height = 8)
+```
+__Chi Square Test of Nub core MDR prep between clusters__
+```{r}
+df_mdr_p <- df_filtered %>%
+  filter(
+    Art_Type_Sub == "Lev_Nub",
+    Nub_Distal_Prep != "indeterminate",
+    Nub_Distal_Prep != "missing",
+    !is.na(Nub_Distal_Prep)
+  )
+contingency_table <- df_mdr_p %>%
+  group_by(Cluster_3, Nub_Distal_Prep) %>%
+  summarise(count = n(), .groups = 'drop') %>%
+  pivot_wider(names_from = Nub_Distal_Prep, values_from = count, values_fill = list(count = 0)) %>%
+  column_to_rownames(var = "Cluster_3")
+chisq_test <- chisq.test(contingency_table)
+print(chisq_test)
+```
+__Figure S13: Ternary plot of MDR prep by cluster__
+```{r}
+ddf_mdr_p <- df_filtered %>%
+    filter(!is.na(Nub_Distal_Prep), Nub_Distal_Prep != "")
+df_counts <- df_mdr_p %>%
+    group_by(Cluster_3) %>%
+summarize(
+    divergent = sum(Nub_Distal_Prep == "divergent"),
+        bilateral = sum(Nub_Distal_Prep == "bilateral"),
+        divergent_lateral = sum(Nub_Distal_Prep == "divergent_lateral")
+    )
+df_proportions <- df_counts %>%
+    mutate(
+       total = divergent + bilateral + divergent_lateral,
+       total = ifelse(total == 0, 1, total),
+       A = divergent / total,
+       B = bilateral / total,
+       C = divergent_lateral / total,
+      label_x = A - .02,
+       label_y = B + 0.02
+      )
+MDR_prep_tern <- ggtern(data = df_proportions, aes(x = A, y = B, z = C)) +
+  geom_point(aes(color = Cluster_3), size = 2.5) +
+  geom_text(aes(x = label_x, y = label_y, label = Cluster_3), size = 3, color = "black", fontface = "bold", hjust = -0.1) +
+  scale_color_brewer(palette = "Paired") +
+  theme_ggtern() +
+  labs(title = "",
+       x = "Type 1", y = "Type 2", z = "Type 1/2", color = "Cluster") +
+  theme(
+    legend.position = "right",
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 12),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  )
+MDR_prep_tern
+ggsave("Figures/SI/S13-MDR_prep_tern.png", plot = MDR_prep_tern, width = 12, height = 8)
+```
+### Platforms
+
+__Figure S14: Nubian platform prep pie charts for all sites__
+```{r}
+df_nub_plat <- df_filtered %>%
+  filter(Art_Type_Sub == "Lev_Nub",
+         Primary_Plat != "crushed&missing&indeterm",
+         !is.na(Primary_Plat))
+data_counts <- df_nub_plat %>%
+  group_by(Site, Primary_Plat, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Site, Primary_Plat, Cluster_3, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Site, Cluster_3) %>%
+  mutate(proportion = count / sum(count)) %>%
+  filter(sum(count) > 0)
+data_counts_filtered <- data_counts_complete %>%
+  droplevels() %>%
+  filter(Site %in% unique(Site[!is.na(Cluster_3)]))
+nub_plat_prep_site <- ggplot(data_counts_filtered, aes(x = "", y = proportion, fill = Primary_Plat)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3 + Site, scales = "free_x", ncol = 5) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 13, face = "bold")
+  )
+nub_plat_prep_site
+ggsave("Figures/SI/S14-nub_plat_prep_site.png", plot = nub_plat_prep_site, width = 12, height = 8)
+```
+__Figure S15: Nubian platform prep pie charts by cluster__
+```{r}
+df_nub_plat <- df_filtered %>%
+  filter(Art_Type_Sub == "Lev_Nub", Primary_Plat != "crushed&missing&indeterm", !is.na(Primary_Plat))
+data_counts <- df_nub_plat %>%
+  group_by(Cluster_3, Primary_Plat) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Primary_Plat, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+nub_plat_prep_cluster <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Primary_Plat)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+   geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+   theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+nub_plat_prep_cluster
+ggsave("Figures/SI/S15-nub_plat_prep_cluster.png", plot = nub_plat_prep_cluster, width = 12, height = 8)
+```
+### Shape
+
+__Figure S16: Nubian core shape pie charts for all sites__
+```{r}
+df_nub_s <- df_filtered %>%
+  filter(Art_Type_Sub == "Lev_Nub", !is.na(Shape), Shape != "other", Shape != "irregular")
+data_counts <- df_nub_s %>%
+  group_by(Site, Shape, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Site, Shape, Cluster_3, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Site, Cluster_3) %>%
+  mutate(proportion = count / sum(count)) %>%
+  filter(sum(count) > 0)
+data_counts_filtered <- data_counts_complete %>%
+  droplevels() %>%
+  filter(Site %in% unique(Site[!is.na(Cluster_3)]))
+nub_shape_sites <- ggplot(data_counts_filtered, aes(x = "", y = proportion, fill = Shape)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3 + Site, scales = "free_x") +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+   geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 13, face = "bold")
+  )
+nub_shape_sites
+ggsave("Figures/SI/S16-nub_shape_sites.png", plot = nub_shape_sites, width = 12, height = 8)
+```
+__Figure S17: Nubian core shape pie charts by cluster__
+```{r}
+df_nub_s <- df_filtered %>%
+  filter(Art_Type_Sub == "Lev_Nub", !is.na(Shape), Shape != "indeterminate", Shape != "irregular", Shape != "other")
+data_counts <- df_nub_s %>%
+  group_by(Cluster_3, Shape) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Shape, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+Nub_core_shape_cluster <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Shape)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+Nub_core_shape_cluster
+ggsave("Figures/SI/S17-nub_core_shape_cluster.png", plot = Nub_core_shape_cluster, width = 12, height = 8)
+```
+__Chi Square Test of Nub core shape between clusters__
+```{r}
+contingency_table <- data_counts_complete %>%
+  select(Cluster_3, Shape, count) %>%
+  pivot_wider(names_from = Shape, values_from = count, values_fill = list(count = 0)) %>%
+  column_to_rownames(var = "Cluster_3")
+contingency_table <- contingency_table[rowSums(contingency_table) > 0, colSums(contingency_table) > 0]
+chisq_test <- chisq.test(contingency_table)
+print(chisq_test)
+```
+__Fisher's Exact Test__
+```{r}
+clusters <- unique(as.character(data_counts_complete$Cluster_3))
+cluster_pairs <- combn(clusters, 2, simplify = FALSE)
+perform_fisher_posthoc <- function(pair) {
+  cluster1 <- pair[1]
+  cluster2 <- pair[2]
+  subset_table <- data_counts_complete %>%
+    filter(Cluster_3 %in% c(cluster1, cluster2)) %>%
+    select(Cluster_3, Shape, count) %>%
+    spread(key = Shape, value = count, fill = 0) %>%
+    column_to_rownames(var = "Cluster_3")
+  subset_table <- subset_table[rowSums(subset_table) > 0, colSums(subset_table) > 0]
+  if (nrow(subset_table) > 1 && ncol(subset_table) > 1) {
+    fisher_result <- fisher.test(subset_table, simulate.p.value = TRUE)
+    p_value <- fisher_result$p.value
+  } else {
+    p_value <- NA
+  }
+  tibble(
+    Cluster_1 = cluster1,
+    Cluster_2 = cluster2,
+    Fisher_p_value = p_value
+  )
+}
+posthoc_results_fisher <- purrr::map_df(cluster_pairs, perform_fisher_posthoc)
+posthoc_results_fisher <- posthoc_results_fisher %>%
+  mutate(p_value_adjusted = p.adjust(Fisher_p_value, method = "bonferroni"))
+print(posthoc_results_fisher)
+```
+### Final Observable Scar
+
+__Figure S18: Nubian core final scar for all sites__
+```{r}
+df_nub_fls <- df_filtered %>%
+  filter(Art_Type == "Lev_Nub", !is.na(Lev_Scar), Lev_Scar != "recycled", Lev_Scar != "overpassed")
+data_counts <- df_nub_fls %>%
+  group_by(Site, Lev_Scar, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Site, Lev_Scar, Cluster_3, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Site, Cluster_3) %>%
+  mutate(proportion = count / sum(count)) %>%
+  filter(sum(count) > 0)
+data_counts_filtered <- data_counts_complete %>%
+  droplevels() %>%
+  filter(Site %in% unique(Site[!is.na(Cluster_3)]))
+nub_fls_sites <- ggplot(data_counts_filtered, aes(x = "", y = proportion, fill = Lev_Scar)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3 + Site, scales = "free_x") +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+   geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+ labs(title = "", fill = "") +  
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 13, face = "bold")
+  )
+nub_fls_sites
+ggsave("Figures/SI/S18-nub_fls_sites.png", plot = nub_fls_sites, width = 12, height = 8)
+```
+__Figure S19: Nubian core final scar pie charts by cluster__
+```{r}
+df_nub_fls <- df_filtered %>%
+  filter(Art_Type == "Lev_Nub", !is.na(Lev_Scar), Lev_Scar != "recycled", Lev_Scar != "overpassed")
+data_counts <- df_nub_fls %>%
+  group_by(Cluster_3, Lev_Scar) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Lev_Scar, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+Nub_core_fls_cluster <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Lev_Scar)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+Nub_core_fls_cluster
+ggsave("Figures/SI/S19-nub_core_fls_cluster.png", plot = Nub_core_fls_cluster, width = 12, height = 8)
+```
+__Chi Square Test of Nub core final scar between clusters__
+```{r}
+contingency_table <- data_counts_complete %>%
+  select(Cluster_3, Lev_Scar, count) %>%
+  pivot_wider(names_from = Lev_Scar, values_from = count, values_fill = list(count = 0)) %>%
+  column_to_rownames(var = "Cluster_3")
+contingency_table <- contingency_table[rowSums(contingency_table) > 0, colSums(contingency_table) > 0]
+chisq_test <- chisq.test(contingency_table)
+print(chisq_test)
+```
+## Metric Analysis
+
+### Linear Measurements
+
+__Figure S20: Boxplot of Nub core length by site__
+```{r}
+Nub_core_length_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Max_Length)),
+  aes(x = reorder(Site, desc(Max_Length), FUN = median), y = Max_Length, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max length (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+Nub_core_length_site
+ggsave("Figures/SI/S20-nub_core_length_site.png", plot = Nub_core_length_site, width = 12, height = 8)
+```
+__Figure S21: Boxplot of Nub core length by cluster__
+```{r}
+Nub_core_length_cluster <- ggplot(df_filtered %>% filter(!is.na(Max_Length), Art_Type_Sub == "Lev_Nub"),
+              aes(x = as.factor(Cluster_3), y = Max_Length,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "max length (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+Nub_core_length_cluster
+ggsave("Figures/SI/S21-nub_core_length_cluster.png", plot = Nub_core_length_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis Nub Core Length Test__
+```{r}
+df_Nub_L = df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Max_Length))
+kruskal.test(Max_Thick ~ as.factor(Cluster_3), data = df_Nub_L)
+dunn.test(df_Nub_L$Max_Length, df_Nub_L$Cluster_3, method = "bonferroni")
+```
+__Figure S22: Boxplot of Nub core width by site__
+```{r}
+Nub_core_width_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Max_Width)),
+  aes(x = reorder(Site, desc(Max_Width), FUN = median), y = Max_Width, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+Nub_core_width_site
+ggsave("Figures/SI/S22-nub_core_width_site.png", plot = Nub_core_width_site, width = 12, height = 8)
+```
+__Figure S23: Boxplot of Nub core width by cluster__
+```{r}
+Nub_core_width_cluster <- ggplot(df_filtered %>% filter(!is.na(Max_Width), Art_Type_Sub == "Lev_Nub"),
+              aes(x = as.factor(Cluster_3), y = Max_Width,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "max width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+Nub_core_width_cluster
+ggsave("Figures/SI/S23-nub_core_width_cluster.png", plot = Nub_core_width_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis Nub Core Width Test__
+```{r}
+df_Nub_W = df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Max_Width))
+kruskal.test(Max_Width ~ as.factor(Cluster_3), data = df_Nub_W)
+dunn.test(df_Nub_W$Max_Width, df_Nub_W$Cluster_3, method = "bonferroni")
+```
+__Figure S24: Boxplot of Nubian core thickness by site__
+```{r}
+Nub_core_thick_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Max_Thick)),
+  aes(x = reorder(Site, desc(Max_Thick), FUN = median), y = Max_Thick, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "midpoint thickness (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+Nub_core_thick_site
+ggsave("Figures/SI/S24-nub_core_thick_site.png", plot = Nub_core_thick_site, width = 12, height = 8)
+```
+__Figure S25: Boxplot of Nub core thickness by cluster__
+```{r}
+Nub_core_thick_cluster <- ggplot(df_filtered %>% filter(!is.na(Max_Thick), Art_Type_Sub == "Lev_Nub"),
+              aes(x = as.factor(Cluster_3), y = Max_Thick,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "midpoint thickness (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+Nub_core_thick_cluster
+ggsave("Figures/SI/S25-nub_core_thick_cluster.png", plot = Nub_core_thick_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis Nub Core Thick Test__
+```{r}
+df_Nub_T = df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Max_Thick))
+kruskal.test(Max_Thick ~ as.factor(Cluster_3), data = df_Nub_T)
+dunn.test(df_Nub_T$Max_Thick, df_Nub_T$Cluster_3, method = "bonferroni")
+```
+__Figure S26: Boxplot of Nubian core Index of Flattening by site__
+```{r}
+Nub_core_IF_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Index_F)),
+  aes(x = reorder(Site, desc(Index_F), FUN = median), y = Index_F, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "thickness / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+Nub_core_IF_site
+ggsave("Figures/SI/S26-nub_core_IF_site.png", plot = Nub_core_IF_site, width = 12, height = 8)
+```
+__Figure S27: Boxplot of Nubian core Index of Flattening by cluster__
+```{r}
+Nub_core_IF_cluster <- ggplot(df_filtered %>% filter(!is.na(Index_F), Art_Type_Sub == "Lev_Nub"),
+              aes(x = as.factor(Cluster_3), y = Index_F,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "thickness / width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+Nub_core_IF_cluster
+ggsave("Figures/SI/S27-nub_core_IF_cluster.png", plot = Nub_core_IF_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis Test of Nub Core IF__
+```{r}
+df_Nub_IF = df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Index_F))
+kruskal.test(Index_F ~ as.factor(Cluster_3), data = df_Nub_IF)
+dunn.test(df_Nub_IF$Index_F, df_Nub_IF$Cluster_3, method = "bonferroni")
+```
+__Figure S28: Boxplot of Nubian core Index of Elongation by site__
+```{r}
+Nub_core_IE_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Index_E)),
+  aes(x = reorder(Site, desc(Index_E), FUN = median), y = Index_E, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+Nub_core_IE_site
+ggsave("Figures/SI/S28-nub_core_IE_site.png", plot = Nub_core_IE_site, width = 12, height = 8)
+```
+__Figure S29: Boxplot of Nubian core Index of Elongation by cluster__
+```{r}
+Nub_core_IE_cluster <- ggplot(df_filtered %>% filter(!is.na(Index_E), Art_Type_Sub == "Lev_Nub"),
+              aes(x = as.factor(Cluster_3), y = Index_E,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "length / width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+Nub_core_IE_cluster
+ggsave("Figures/SI/S29-nub_core_IE_cluster.png", plot = Nub_core_IE_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's Tests of Nub Core IE__
+```{r}
+df_Nub_IE = df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Index_E))
+kruskal.test(Index_E ~ as.factor(Cluster_3), data = df_Nub_IE)
+dunn.test(df_Nub_IE$Index_E, df_Nub_IE$Cluster_3, method = "bonferroni")
+```
+__Figure S30: Nub core L x W scatterplot by cluster__
+```{r}
+slopes <- df_filtered %>%
+    filter(Art_Type_Sub == "Lev_Nub", !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Cluster_3) %>%
+    do(tidy(lm(Max_Length ~ Max_Width, data = .))) %>%
+    filter(term == "Max_Width") %>%
+    select(Cluster_3, estimate)
+label_positions <- df_filtered %>%
+    filter(Art_Type_Sub == "Lev_Nub", !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Cluster_3) %>%
+    summarize(
+        x = mean(Max_Width),
+        y = mean(Max_Length)
+    ) %>%
+    left_join(slopes, by = "Cluster_3")
+Nub_core_LW_scatter <- ggplot(
+    df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Max_Length), !is.na(Max_Width)),
+    aes(x = Max_Width, y = Max_Length, color = as.factor(Cluster_3))
+) +
+    geom_point(size = 1.1, alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, linetype = "dashed", size = 1.2) +
+    geom_text(
+        data = label_positions,
+        aes(x = x + 30, y = y, label = paste0("", round(estimate, 2), "")),
+        hjust = 0, vjust = -0.5,
+        show.legend = FALSE
+    ) +
+    labs(
+        x = "width (mm)",
+        y = "length (mm)",
+        color = "Cluster",
+    ) +
+    scale_color_brewer(palette = "Paired") +
+    theme_minimal() +
+    theme(
+        legend.title = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.position = "right",
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17),
+        axis.title.x = element_text(size = 17),
+    )
+Nub_core_LW_scatter
+ggsave("Figures/SI/S30-nub_core_LW_scatter.png", plot = Nub_core_LW_scatter, width = 12, height = 8)
+```
+__Figure 8: Boxplot of Nubian core geometric mean by site__
+```{r}
+Nub_core_geo_mean_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Geo_Mean)),
+  aes(x = reorder(Site, desc(Geo_Mean), FUN = median), y = Geo_Mean, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "geometric mean (mm)",
+      fill = "Cluster") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+Nub_core_geo_mean_site
+ggsave("Figures/MS/8-nub_core_geo_mean_site.png", plot = Nub_core_geo_mean_site, width = 12, height = 8)
+```
+__Figure S31: Boxplot of Nubian core geometric mean by cluster__
+```{r}
+Nub_core_geo_mean_cluster <- ggplot(df_filtered %>% filter(!is.na(Geo_Mean), Art_Type_Sub == "Lev_Nub"),
+              aes(x = as.factor(Cluster_3), y = Geo_Mean,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "geometric mean (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+Nub_core_geo_mean_cluster
+ggsave("Figures/SI/S31-nub_core_geo_mean_cluster.png", plot = Nub_core_geo_mean_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis & Dunns Tests of Nub core geo mean__
+```{r}
+df_NGM = df_filtered %>% filter(Art_Type_Sub == "Lev_Nub", !is.na(Geo_Mean))
+kruskal.test(Geo_Mean ~ as.factor(Cluster_3), data = df_NGM)
+dunn.test(df_NGM$Geo_Mean, df_NGM$Cluster_3, method = "bonferroni")
+```
+# Bidirectional Cores
+
+## Descriptive Statistics
+
+__Table S4: Bi core descriptive statistics by site__
+```{r}
+df_bi <- df_filtered %>%
+  filter(Art_Type == "bi")
+descriptive_stats_length_site <- df_bi %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Length, na.rm = TRUE),
+    sd = sd(Max_Length, na.rm = TRUE),
+    min = min(Max_Length, na.rm = TRUE),
+    max = max(Max_Length, na.rm = TRUE)
+  )
+descriptive_stats_width_site <- df_bi %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Width, na.rm = TRUE),
+    sd = sd(Max_Width, na.rm = TRUE),
+    min = min(Max_Width, na.rm = TRUE),
+    max = max(Max_Width, na.rm = TRUE)
+  )
+descriptive_stats_thickness_site <- df_bi %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Thick, na.rm = TRUE),
+    sd = sd(Max_Thick, na.rm = TRUE),
+    min = min(Max_Thick, na.rm = TRUE),
+    max = max(Max_Thick, na.rm = TRUE)
+  )
+kable(descriptive_stats_length_site, caption = "Descriptive Statistics for Max Length by Site")
+kable(descriptive_stats_width_site, caption = "Descriptive Statistics for Max Width by Site")
+kable(descriptive_stats_thickness_site, caption = "Descriptive Statistics for Max Thickness by Site")
+```
+__Table S5: Bi core descriptive statistics by cluster__
+```{r}
+descriptive_stats_length_cluster <- df_bi %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Length, na.rm = TRUE),
+    sd = sd(Max_Length, na.rm = TRUE),
+    min = min(Max_Length, na.rm = TRUE),
+    max = max(Max_Length, na.rm = TRUE)
+  )
+descriptive_stats_width_cluster <- df_bi %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Width, na.rm = TRUE),
+    sd = sd(Max_Width, na.rm = TRUE),
+    min = min(Max_Width, na.rm = TRUE),
+    max = max(Max_Width, na.rm = TRUE)
+  )
+descriptive_stats_thickness_cluster <- df_bi %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Thick, na.rm = TRUE),
+    sd = sd(Max_Thick, na.rm = TRUE),
+    min = min(Max_Thick, na.rm = TRUE),
+    max = max(Max_Thick, na.rm = TRUE)
+  )
+kable(descriptive_stats_length_cluster, caption = "Descriptive Statistics for Max Length by Cluster_3")
+kable(descriptive_stats_width_cluster, caption = "Descriptive Statistics for Max Width by Cluster_3")
+kable(descriptive_stats_thickness_cluster, caption = "Descriptive Statistics for Max Thickness by Cluster_3")
+```
+## Morphology
+
+### Dorsal Scars
+
+__Figure S32: Bi core dorsal scar pie charts for all sites__
+```{r}
+df_bi_ds <- df_filtered %>%
+  filter(Art_Type == "bi", !is.na(Scar_Pattern))
+data_counts <- df_bi_ds %>%
+  group_by(Site, Scar_Pattern, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Site, Scar_Pattern, Cluster_3, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Site, Cluster_3) %>%
+  mutate(proportion = count / sum(count)) %>%
+  filter(sum(count) > 0)
+data_counts_filtered <- data_counts_complete %>%
+  droplevels() %>%
+  filter(Site %in% unique(Site[!is.na(Cluster_3)]))
+bi_ds_sites <- ggplot(data_counts_filtered, aes(x = "", y = proportion, fill = Scar_Pattern)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3 + Site, scales = "free_x") +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+   geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 13, face = "bold")
+  )
+bi_ds_sites
+ggsave("Figures/SI/S32-bi_ds_sites.png", plot = bi_ds_sites, width = 12, height = 8)
+```
+__Figure S33: Bi core shape pie charts by cluster__
+```{r}
+df_bi_ds <- df_filtered %>%
+  filter(Art_Type == "bi", !is.na(Scar_Pattern))
+data_counts <- df_bi_ds %>%
+  group_by(Cluster_3, Scar_Pattern) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Scar_Pattern, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+bi_ds_cluster <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Scar_Pattern)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.049, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+bi_ds_cluster
+ggsave("Figures/SI/S33-bi_core_ds_cluster.png", plot = bi_ds_cluster, width = 12, height = 8)
+```
+__Chi Square Test of Bi core dorsal scars between clusters__
+```{r}
+contingency_table <- data_counts_complete %>%
+  select(Cluster_3, Scar_Pattern, count) %>%
+  pivot_wider(names_from = Scar_Pattern, values_from = count, values_fill = list(count = 0)) %>%
+  column_to_rownames(var = "Cluster_3")
+contingency_table <- contingency_table[rowSums(contingency_table) > 0, colSums(contingency_table) > 0]
+chisq_test <- chisq.test(contingency_table)
+print(chisq_test)
+```
+__Fisher's Exact Test__
+```{r}
+clusters <- unique(as.character(data_counts_complete$Cluster_3))
+cluster_pairs <- combn(clusters, 2, simplify = FALSE)
+perform_fisher_posthoc <- function(pair) {
+  cluster1 <- pair[1]
+  cluster2 <- pair[2]
+  subset_table <- data_counts_complete %>%
+    filter(Cluster_3 %in% c(cluster1, cluster2)) %>%
+    select(Cluster_3, Scar_Pattern, count) %>%
+    spread(key = Scar_Pattern, value = count, fill = 0) %>%
+    column_to_rownames(var = "Cluster_3")
+  subset_table <- subset_table[rowSums(subset_table) > 0, colSums(subset_table) > 0]
+  if (nrow(subset_table) > 1 && ncol(subset_table) > 1) {
+    fisher_result <- fisher.test(subset_table, simulate.p.value = TRUE)
+    p_value <- fisher_result$p.value
+  } else {
+    p_value <- NA
+  }
+  tibble(
+    Cluster_1 = cluster1,
+    Cluster_2 = cluster2,
+    Fisher_p_value = p_value
+  )
+}
+posthoc_results_fisher <- purrr::map_df(cluster_pairs, perform_fisher_posthoc)
+posthoc_results_fisher <- posthoc_results_fisher %>%
+  mutate(p_value_adjusted = p.adjust(Fisher_p_value, method = "bonferroni"))
+print(posthoc_results_fisher)
+```
+### Platforms
+
+__Figure S34: Bi core platform prep pie charts for all sites__
+```{r}
+df_bi_p <- df_filtered %>%
+  filter(Art_Type == "bi", Primary_Plat != "crushed&missing&indeterm", !is.na(Primary_Plat))
+data_counts <- df_bi_p %>%
+  group_by(Site, Primary_Plat, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Site, Primary_Plat, Cluster_3, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Site, Cluster_3) %>%
+  mutate(proportion = count / sum(count)) %>%
+  filter(sum(count) > 0)
+data_counts_filtered <- data_counts_complete %>%
+  droplevels() %>%
+  filter(Site %in% unique(Site[!is.na(Cluster_3)]))
+bi_plat_prep_site <- ggplot(data_counts_filtered, aes(x = "", y = proportion, fill = Primary_Plat)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3 + Site, scales = "free_x", ncol = 5) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 2.5
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 13, face = "bold")
+  )
+bi_plat_prep_site
+ggsave("Figures/SI/S34-bi_plat_prep_site.png", plot = bi_plat_prep_site, width = 12, height = 8)
+```
+__Figure S35: Bi core platform prep pie charts by cluster__
+```{r}
+df_bi_p <- df_filtered %>%
+  filter(Art_Type == "bi", Primary_Plat != "crushed&missing&indeterm", !is.na(Primary_Plat))
+data_counts <- df_bi_p %>%
+  group_by(Cluster_3, Primary_Plat) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Primary_Plat, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+bi_core_plat <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Primary_Plat)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.049, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 12),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 14, face = "bold")
+  )
+bi_core_plat
+ggsave("Figures/SI/S35-bi_core_plat.png", plot = bi_core_plat, width = 12, height = 8)
+```
+__Chi Square Test of Platform differences between clusters__
+```{r}
+df_bi_p <- df_filtered %>%
+  filter(Art_Type == "bi", Primary_Plat != "crushed&missing&indeterm", !is.na(Primary_Plat))
+data_counts_bi <- df_bi_p %>%
+  group_by(Cluster_3, Primary_Plat) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_bi_complete <- data_counts_bi %>%
+  complete(Cluster_3, Primary_Plat, fill = list(count = 0))
+contingency_table <- data_counts_bi_complete %>%
+  select(Cluster_3, Primary_Plat, count) %>%
+  pivot_wider(names_from = Primary_Plat, values_from = count, values_fill = list(count = 0)) %>%
+  column_to_rownames(var = "Cluster_3")
+chisq_test <- chisq.test(contingency_table)
+print(chisq_test)
+```
+### Shape
+
+__Figure S36: Bi core shape pie charts for all sites__
+```{r}
+df_bi_s <- df_filtered %>%
+  filter(Art_Type == "bi", !is.na(Shape), Shape != "other", Shape != "indeterminate")
+data_counts <- df_bi_s %>%
+  group_by(Site, Shape, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Site, Shape, Cluster_3, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Site, Cluster_3) %>%
+  mutate(proportion = count / sum(count)) %>%
+  filter(sum(count) > 0)
+data_counts_filtered <- data_counts_complete %>%
+  droplevels() %>%
+  filter(Site %in% unique(Site[!is.na(Cluster_3)]))
+bi_shape_sites <- ggplot(data_counts_filtered, aes(x = "", y = proportion, fill = Shape)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3 + Site, scales = "free_x") +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+   geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 13, face = "bold")
+  )
+bi_shape_sites
+ggsave("Figures/SI/S36-bi_shape_sites.png", plot = bi_shape_sites, width = 12, height = 8)
+```
+__Figure S37: Bi core shape pie charts by cluster__
+```{r}
+df_bi_s <- df_filtered %>%
+  filter(Art_Type == "bi", Shape != "other", !is.na(Shape))
+data_counts <- df_bi_s %>%
+  group_by(Cluster_3, Shape) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Shape, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+custom_labels <- c(
+  "cordiform" = "cordiform",
+  "cylindrical" = "cylindrical",
+  "nws" = "narrow working surface",
+  "rectangular" = "rectangular",
+  "triangular" = "triangular"
+)
+bi_core_shape <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Shape)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+  scale_fill_manual(values = RColorBrewer::brewer.pal(n = length(custom_labels), name = "Set3"),
+                    labels = custom_labels)  +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.049, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+bi_core_shape
+ggsave("Figures/SI/S37-bi_core_shape_cluster.png", plot = bi_core_shape, width = 12, height = 8)
+```
+__Chi Square test of shape differences between clusters__
+```{r}
+df_bi_s <- df_filtered %>%
+  filter(Art_Type == "bi", Shape != "other", !is.na(Shape))
+data_counts_bi <- df_bi_s %>%
+  group_by(Cluster_3, Shape) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_bi_complete <- data_counts_bi %>%
+  complete(Cluster_3, Shape, fill = list(count = 0))
+contingency_table <- data_counts_bi_complete %>%
+  select(Cluster_3, Shape, count) %>%
+  spread(key = Shape, value = count, fill = 0) %>%
+  column_to_rownames(var = "Cluster_3")
+contingency_table <- contingency_table[rowSums(contingency_table) > 0, colSums(contingency_table) > 0]
+chisq_test <- chisq.test(contingency_table)
+chisq_test
+```
+__Fisher's Exact Test__
+```{r}
+perform_fisher_posthoc <- function(pair) {
+  cluster1 <- pair[1]
+  cluster2 <- pair[2]
+  subset_table <- data_counts_bi_complete %>%
+    filter(Cluster_3 %in% c(cluster1, cluster2)) %>%
+    select(Cluster_3, Shape, count) %>%
+    spread(key = Shape, value = count, fill = 0) %>%
+    column_to_rownames(var = "Cluster_3")
+  if (nrow(subset_table) != 2 || ncol(subset_table) < 2) {
+    warning(paste("Skipping invalid table for pair:", cluster1, cluster2))
+    return(tibble(
+      Cluster_1 = cluster1,
+      Cluster_2 = cluster2,
+      Fisher_p_value = NA,
+      p_value_adjusted = NA
+    ))
+  }
+  fisher_result <- fisher.test(subset_table, simulate.p.value = TRUE, B = 1e5)
+  tibble(
+    Cluster_1 = cluster1,
+    Cluster_2 = cluster2,
+    Fisher_p_value = fisher_result$p.value,
+    p_value_adjusted = p.adjust(fisher_result$p.value, method = "bonferroni")
+  )
+}
+posthoc_results_fisher <- purrr::map_df(cluster_pairs, perform_fisher_posthoc)
+print(posthoc_results_fisher)
+```
+### Final Observable Scar
+
+__Figure S38: Bi core final scar pie charts for all sites__
+```{r}
+df_bi_fls <- df_filtered %>%
+  filter(Art_Type == "bi", !is.na(Lev_Scar), Lev_Scar != "recycled", Lev_Scar != "overpassed")
+data_counts <- df_bi_fls %>%
+  group_by(Site, Lev_Scar, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Site, Lev_Scar, Cluster_3, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Site, Cluster_3) %>%
+  mutate(proportion = count / sum(count)) %>%
+  filter(sum(count) > 0)
+data_counts_filtered <- data_counts_complete %>%
+  droplevels() %>%
+  filter(Site %in% unique(Site[!is.na(Cluster_3)]))
+bi_fls_sites <- ggplot(data_counts_filtered, aes(x = "", y = proportion, fill = Lev_Scar)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3 + Site, scales = "free_x") +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+   geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+ labs(title = "", fill = "") +  
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 13, face = "bold")
+  )
+bi_fls_sites
+ggsave("Figures/SI/S38-bi_fls_sites.png", plot = bi_fls_sites, width = 12, height = 8)
+```
+__Figure S39: Bi core final scar pie charts by cluster__
+```{r}
+df_bi_fls <- df_filtered %>%
+  filter(Art_Type == "Lev_Nub", !is.na(Lev_Scar), Lev_Scar != "recycled", Lev_Scar != "overpassed")
+data_counts <- df_bi_fls %>%
+  group_by(Cluster_3, Lev_Scar) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Lev_Scar, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+Nub_core_fls_cluster <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Lev_Scar)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+Nub_core_fls_cluster
+ggsave("Figures/SI/S39-nub_core_fls_cluster.png", plot = Nub_core_fls_cluster, width = 12, height = 8)
+```
+__Chi Square Test of bi core final scar between clusters__
+```{r}
+contingency_table <- data_counts_complete %>%
+  select(Cluster_3, Lev_Scar, count) %>%
+  pivot_wider(names_from = Lev_Scar, values_from = count, values_fill = list(count = 0)) %>%
+  column_to_rownames(var = "Cluster_3")
+contingency_table <- contingency_table[rowSums(contingency_table) > 0, colSums(contingency_table) > 0]
+chisq_test <- chisq.test(contingency_table)
+print(chisq_test)
+```
+## Metric Analysis
+
+__Figure S40: Boxplot of bi core length by site__
+```{r}
+bi_core_length_site <- ggplot(df_filtered %>% filter(Art_Type == "bi", !is.na(Max_Length)),
+  aes(x = reorder(Site, desc(Max_Length), FUN = median), y = Max_Length, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max length (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+bi_core_length_site
+ggsave("Figures/SI/S40-bi_core_length_site.png", plot = bi_core_length_site, width = 12, height = 8)
+```
+__Figure S41: Boxplot of Nub core length by cluster__
+```{r}
+bi_core_length_cluster <- ggplot(df_filtered %>% filter(Art_Type == "bi", !is.na(Max_Length)),
+              aes(x = as.factor(Cluster_3), y = Max_Length,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "max length (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+bi_core_length_cluster
+ggsave("Figures/SI/S41-bi_core_length_cluster.png", plot = bi_core_length_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's Test of bi core length__
+```{r}
+df_bi_L = df_filtered %>% filter(Art_Type == "bi", !is.na(Max_Length))
+kruskal.test(Max_Thick ~ as.factor(Cluster_3), data = df_bi_L)
+dunn.test(df_bi_L$Max_Length, df_bi_L$Cluster_3, method = "bonferroni")
+```
+__Figure S42: Boxplot of bi core width by site__
+```{r}
+bi_core_width_site <- ggplot(df_filtered %>% filter(Art_Type == "bi", !is.na(Max_Width)),
+  aes(x = reorder(Site, desc(Max_Width), FUN = median), y = Max_Width, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+bi_core_width_site
+ggsave("Figures/SI/S42-bi_core_width_site.png", plot = bi_core_width_site, width = 12, height = 8)
+```
+__Figure S43: Boxplot of bi core width by cluster__
+```{r}
+bi_core_width_cluster <- ggplot(df_filtered %>% filter(!is.na(Max_Width), Art_Type == "bi"),
+              aes(x = as.factor(Cluster_3), y = Max_Width,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "max width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+bi_core_width_cluster
+ggsave("Figures/SI/S43-bi_core_width_cluster.png", plot = bi_core_width_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's tests of bi core width__
+```{r}
+df_bi_W = df_filtered %>% filter(Art_Type == "bi", !is.na(Max_Width))
+kruskal.test(Max_Width ~ as.factor(Cluster_3), data = df_bi_W)
+dunn.test(df_bi_W$Max_Width, df_bi_W$Cluster_3, method = "bonferroni")
+```
+__Figure S44: Boxplot of bi core thickness by site__
+```{r}
+bi_core_thick_site <- ggplot(df_filtered %>% filter(Art_Type == "bi", !is.na(Max_Thick)),
+  aes(x = reorder(Site, desc(Max_Thick), FUN = median), y = Max_Thick, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "midpoint thickness (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+bi_core_thick_site
+ggsave("Figures/SI/S44-bi_core_thick_site.png", plot = bi_core_thick_site, width = 12, height = 8)
+```
+__Figure S45: Boxplot of bi core thickness by cluster__
+```{r}
+bi_core_thick_cluster <- ggplot(df_filtered %>% filter(!is.na(Max_Thick), Art_Type == "bi"),
+              aes(x = as.factor(Cluster_3), y = Max_Thick,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "midpoint thickness (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+bi_core_thick_cluster
+ggsave("Figures/SI/S45-bi_core_thick_cluster.png", plot = bi_core_thick_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's tests of bi core thickness__
+```{r}
+df_bi_T = df_filtered %>% filter(Art_Type == "bi", !is.na(Max_Thick))
+kruskal.test(Max_Thick ~ as.factor(Cluster_3), data = df_bi_T)
+dunn.test(df_bi_T$Max_Thick, df_bi_T$Cluster_3, method = "bonferroni")
+```
+__Figure S46: Boxplot of bi core Index of Flattening by site__
+```{r}
+bi_core_IF_site <- ggplot(df_filtered %>% filter(Art_Type == "bi", !is.na(Index_F)),
+  aes(x = reorder(Site, desc(Index_F), FUN = median), y = Index_F, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "thickness / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+bi_core_IF_site
+ggsave("Figures/SI/S46-bi_core_IF_site.png", plot = bi_core_IF_site, width = 12, height = 8)
+```
+__Figure S47: Boxplot of bi core Index of Flattening by cluster__
+```{r}
+bi_core_IF_cluster <- ggplot(df_filtered %>% filter(!is.na(Index_F), Art_Type == "bi"),
+              aes(x = as.factor(Cluster_3), y = Index_F,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "thickness / width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+bi_core_IF_cluster
+ggsave("Figures/SI/S47-bi_core_IF_cluster.png", plot = bi_core_IF_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's tests of bi core IF__
+```{r}
+df_bi_IF = df_filtered %>% filter(Art_Type == "bi", !is.na(Index_F))
+kruskal.test(Index_F ~ as.factor(Cluster_3), data = df_bi_IF)
+dunn.test(df_bi_IF$Index_F, df_bi_IF$Cluster_3, method = "bonferroni")
+```
+__Figure S48: Boxplot of bi core Index of Elongation by site__
+```{r}
+bi_core_IE_site <- ggplot(df_filtered %>% filter(Art_Type == "bi", !is.na(Index_E)),
+  aes(x = reorder(Site, desc(Index_E), FUN = median), y = Index_E, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+bi_core_IE_site
+ggsave("Figures/SI/S48-bi_core_IE_site.png", plot = bi_core_IE_site, width = 12, height = 8)
+```
+__Figure S49: Boxplot of bi core Index of Elongation by cluster__
+```{r}
+bi_core_IE_cluster <- ggplot(df_filtered %>% filter(!is.na(Index_E), Art_Type == "bi"),
+              aes(x = as.factor(Cluster_3), y = Index_E,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "length / width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+bi_core_IE_cluster
+ggsave("Figures/SI/S49-bi_core_IE_cluster.png", plot = bi_core_IE_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of bi core IE__
+```{r}
+df_bi_IE = df_filtered %>% filter(Art_Type == "bi", !is.na(Index_E))
+kruskal.test(Index_E ~ as.factor(Cluster_3), data = df_bi_IE)
+```
+__Figure S50: bi core L x W scatterplot by cluster__
+```{r}
+slopes <- df_filtered %>%
+    filter(Art_Type == "bi", !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Cluster_3) %>%
+    do(tidy(lm(Max_Length ~ Max_Width, data = .))) %>%
+    filter(term == "Max_Width") %>%
+    select(Cluster_3, estimate)
+label_positions <- df_filtered %>%
+    filter(Art_Type == "bi", !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Cluster_3) %>%
+    summarize(
+        x = mean(Max_Width),
+        y = mean(Max_Length)
+    ) %>%
+    left_join(slopes, by = "Cluster_3")
+bi_core_LW_scatter <- ggplot(
+    df_filtered %>% filter(Art_Type == "bi", !is.na(Max_Length), !is.na(Max_Width)),
+    aes(x = Max_Width, y = Max_Length, color = as.factor(Cluster_3))
+) +
+    geom_point(size = 1.1, alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, linetype = "dashed", size = 1.2) +
+    geom_text(
+        data = label_positions,
+        aes(x = x + 30, y = y, label = paste0("", round(estimate, 2), "")),
+        hjust = 0, vjust = -0.5,
+        show.legend = FALSE
+    ) +
+    labs(
+        x = "width (mm)",
+        y = "length (mm)",
+        color = "Cluster",
+    ) +
+    scale_color_brewer(palette = "Paired") +
+    theme_minimal() +
+    theme(
+        legend.title = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.position = "right",
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17),
+        axis.title.x = element_text(size = 17),
+    )
+bi_core_LW_scatter
+ggsave("Figures/SI/S50-bi_core_LW_scatter.png", plot = bi_core_LW_scatter, width = 12, height = 8)
+```
+__Figure 11: Boxplot of bi core geometric mean by site__
+```{r}
+bi_core_geo_mean_site <- ggplot(df_filtered %>% filter(Art_Type == "bi", !is.na(Geo_Mean)),
+  aes(x = reorder(Site, desc(Geo_Mean), FUN = median), y = Geo_Mean, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "geometric mean (mm)",
+      fill = "Cluster") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+bi_core_geo_mean_site
+ggsave("Figures/MS/11-bi_core_geo_mean_site.png", plot = bi_core_geo_mean_site, width = 12, height = 8)
+```
+__Figure S51: Boxplot of bi core geometric mean by cluster__
+```{r}
+bi_core_geo_mean_cluster <- ggplot(df_filtered %>% filter(!is.na(Geo_Mean), Art_Type == "bi"),
+              aes(x = as.factor(Cluster_3), y = Geo_Mean,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "geometric mean (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+bi_core_geo_mean_cluster
+ggsave("Figures/SI/S51-bi_core_geo_mean_cluster.png", plot = bi_core_geo_mean_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis & Dunn's Tests of bi core geo mean__
+```{r}
+df_BGM = df_filtered %>% filter(Art_Type == "bi", !is.na(Geo_Mean))
+kruskal.test(Geo_Mean ~ as.factor(Cluster_3), data = df_BGM)
+dunn.test(df_BGM$Geo_Mean, df_BGM$Cluster_3, method = "bonferroni")
+```
+# Unidirectional cores
+
+## Descriptive Statistics
+
+__Table S6: Uni core descriptive statistics by site__
+```{r}
+df_uni <- df_filtered %>%
+  filter(Art_Type %in% c("uni_blade", "uni_flake"))
+descriptive_stats_length_site <- df_uni %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Length, na.rm = TRUE),
+    sd = sd(Max_Length, na.rm = TRUE),
+    min = min(Max_Length, na.rm = TRUE),
+    max = max(Max_Length, na.rm = TRUE)
+  )
+descriptive_stats_width_site <- df_uni %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Width, na.rm = TRUE),
+    sd = sd(Max_Width, na.rm = TRUE),
+    min = min(Max_Width, na.rm = TRUE),
+    max = max(Max_Width, na.rm = TRUE)
+  )
+descriptive_stats_thickness_site <- df_uni %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Thick, na.rm = TRUE),
+    sd = sd(Max_Thick, na.rm = TRUE),
+    min = min(Max_Thick, na.rm = TRUE),
+    max = max(Max_Thick, na.rm = TRUE)
+  )
+kable(descriptive_stats_length_site, caption = "Descriptive Statistics for Max Length by Site")
+kable(descriptive_stats_width_site, caption = "Descriptive Statistics for Max Width by Site")
+kable(descriptive_stats_thickness_site, caption = "Descriptive Statistics for Max Thickness by Site")
+```
+__Table S7: Uni core descriptive statistics by cluster__
+```{r}
+descriptive_stats_length_cluster <- df_uni %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Length, na.rm = TRUE),
+    sd = sd(Max_Length, na.rm = TRUE),
+    min = min(Max_Length, na.rm = TRUE),
+    max = max(Max_Length, na.rm = TRUE)
+  )
+descriptive_stats_width_cluster <- df_uni %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Width, na.rm = TRUE),
+    sd = sd(Max_Width, na.rm = TRUE),
+    min = min(Max_Width, na.rm = TRUE),
+    max = max(Max_Width, na.rm = TRUE)
+  )
+descriptive_stats_thickness_cluster <- df_uni %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Thick, na.rm = TRUE),
+    sd = sd(Max_Thick, na.rm = TRUE),
+    min = min(Max_Thick, na.rm = TRUE),
+    max = max(Max_Thick, na.rm = TRUE)
+  )
+kable(descriptive_stats_length_cluster, caption = "Descriptive Statistics for Max Length by Cluster_3")
+kable(descriptive_stats_width_cluster, caption = "Descriptive Statistics for Max Width by Cluster_3")
+kable(descriptive_stats_thickness_cluster, caption = "Descriptive Statistics for Max Thickness by Cluster_3")
+```
+
+## Morphology
+
+### Dorsal Scars
+
+__Figure S52: Uni core dorsal scar pie charts for all sites__
+```{r}
+df_uni_ds <- df_filtered %>%
+  filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Scar_Pattern))
+data_counts <- df_uni_ds %>%
+  group_by(Site, Scar_Pattern, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Site, Scar_Pattern, Cluster_3, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Site, Cluster_3) %>%
+  mutate(proportion = count / sum(count)) %>%
+  filter(sum(count) > 0)
+data_counts_filtered <- data_counts_complete %>%
+  droplevels() %>%
+  filter(Site %in% unique(Site[!is.na(Cluster_3)]))
+uni_ds_sites <- ggplot(data_counts_filtered, aes(x = "", y = proportion, fill = Scar_Pattern)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3 + Site, scales = "free_x") +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+   geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 13, face = "bold")
+  )
+uni_ds_sites
+ggsave("Figures/SI/S52-uni_ds_sites.png", plot = uni_ds_sites, width = 12, height = 8)
+```
+__Figure S53: Uni core dorsal scar pie charts by cluster__
+```{r}
+df_uni_ds <- df_filtered %>%
+  filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Scar_Pattern))
+data_counts <- df_uni_ds %>%
+  group_by(Cluster_3, Scar_Pattern) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Scar_Pattern, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+uni_ds_cluster <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Scar_Pattern)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+uni_ds_cluster
+ggsave("Figures/SI/S53-uni_core_ds_cluster.png", plot = uni_ds_cluster, width = 12, height = 8)
+```
+__Chi Square Test of uni core dorsal scars between clusters__
+```{r}
+contingency_table <- data_counts_complete %>%
+  select(Cluster_3, Scar_Pattern, count) %>%
+  pivot_wider(names_from = Scar_Pattern, values_from = count, values_fill = list(count = 0)) %>%
+  column_to_rownames(var = "Cluster_3")
+contingency_table <- contingency_table[rowSums(contingency_table) > 0, colSums(contingency_table) > 0]
+chisq_test <- chisq.test(contingency_table)
+print(chisq_test)
+```
+__Fisher's Exact Test__
+```{r}
+clusters <- unique(as.character(data_counts_complete$Cluster_3))
+cluster_pairs <- combn(clusters, 2, simplify = FALSE)
+perform_fisher_posthoc <- function(pair) {
+  cluster1 <- pair[1]
+  cluster2 <- pair[2]
+  subset_table <- data_counts_complete %>%
+    filter(Cluster_3 %in% c(cluster1, cluster2)) %>%
+    select(Cluster_3, Scar_Pattern, count) %>%
+    spread(key = Scar_Pattern, value = count, fill = 0) %>%
+    column_to_rownames(var = "Cluster_3")
+  subset_table <- subset_table[rowSums(subset_table) > 0, colSums(subset_table) > 0]
+  if (nrow(subset_table) > 1 && ncol(subset_table) > 1) {
+    fisher_result <- fisher.test(subset_table, simulate.p.value = TRUE)
+    p_value <- fisher_result$p.value
+  } else {
+    p_value <- NA
+  }
+  tibble(
+    Cluster_1 = cluster1,
+    Cluster_2 = cluster2,
+    Fisher_p_value = p_value
+  )
+}
+posthoc_results_fisher <- purrr::map_df(cluster_pairs, perform_fisher_posthoc)
+posthoc_results_fisher <- posthoc_results_fisher %>%
+  mutate(p_value_adjusted = p.adjust(Fisher_p_value, method = "bonferroni"))
+print(posthoc_results_fisher)
+```
+### Shape
+
+__Figure S54: Uni core platform prep pie charts for all sites__
+```{r}
+df_uni_p <- df_filtered %>%
+  filter(Art_Type %in% c("uni_blade", "uni_flake"), Primary_Plat != "crushed&missing&indeterm", !is.na(Primary_Plat))
+data_counts <- df_uni_p %>%
+  group_by(Site, Primary_Plat, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Site, Primary_Plat, Cluster_3, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Site, Cluster_3) %>%
+  mutate(proportion = count / sum(count)) %>%
+  filter(sum(count) > 0)
+data_counts_filtered <- data_counts_complete %>%
+  droplevels() %>%
+  filter(Site %in% unique(Site[!is.na(Cluster_3)]))
+uni_plat_prep_site <- ggplot(data_counts_filtered, aes(x = "", y = proportion, fill = Primary_Plat)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3 + Site, scales = "free_x", ncol = 5) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 2.5
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 13, face = "bold")
+  )
+uni_plat_prep_site
+ggsave("Figures/SI/S54-uni_plat_prep_site.png", plot = uni_plat_prep_site, width = 12, height = 8)
+```
+__Figure S55: Uni core platform prep pie charts by cluster__
+```{r}
+df_uni_p <- df_filtered %>%
+  filter(Art_Type %in% c("uni_blade", "uni_flake"), Primary_Plat != "crushed&missing&indeterm", !is.na(Primary_Plat))
+data_counts <- df_uni_p %>%
+  group_by(Cluster_3, Primary_Plat) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Primary_Plat, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+uni_core_plat_cluster <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Primary_Plat)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.049, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+uni_core_plat_cluster
+ggsave("Figures/SI/S55-uni_core_plat_cluster.png", plot = uni_core_plat_cluster, width = 12, height = 8)
+```
+__Chi Square Test of Platform differences between clusters__
+```{r}
+df_uni_p <- df_filtered %>%
+  filter(Art_Type %in% c("uni_blade", "uni_flake"), Primary_Plat != "crushed&missing&indeterm", !is.na(Primary_Plat))
+data_counts <- df_uni_p %>%
+  group_by(Cluster_3, Primary_Plat) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Primary_Plat, fill = list(count = 0))
+contingency_table <- data_counts_complete %>%
+  select(Cluster_3, Primary_Plat, count) %>%
+  spread(key = Primary_Plat, value = count, fill = 0) %>%
+  column_to_rownames(var = "Cluster_3")
+print(contingency_table)
+chisq_test <- chisq.test(contingency_table)
+chisq_test
+```
+__Figure S56: Uni core shape pie charts for all sites__
+```{r}
+df_uni_s <- df_filtered %>%
+  filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Shape), Shape != "indeterminate", Shape != "irregular")
+data_counts <- df_uni_s %>%
+  group_by(Site, Shape, Cluster_3) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Site, Shape, Cluster_3, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Site, Cluster_3) %>%
+  mutate(proportion = count / sum(count)) %>%
+  filter(sum(count) > 0)
+data_counts_filtered <- data_counts_complete %>%
+  droplevels() %>%
+  filter(Site %in% unique(Site[!is.na(Cluster_3)]))
+uni_shape_sites <- ggplot(data_counts_filtered, aes(x = "", y = proportion, fill = Shape)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3 + Site, scales = "free_x") +
+  theme_void() +
+  scale_fill_brewer(palette = "Set3") +
+  labs(title = "", fill = "") +
+   geom_text(
+    aes(label = ifelse(proportion > 0.089, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 13, face = "bold")
+  )
+uni_shape_sites
+ggsave("Figures/SI/S56-uni_shape_sites.png", plot = uni_shape_sites, width = 12, height = 8)
+```
+__Figure S57: uni core shape pie charts by cluster__
+```{r}
+df_uni_s <- df_filtered %>%
+  filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Shape), Shape != "irregular", Shape != "other", Shape != "indeterminate")
+data_counts <- df_uni_s %>%
+  group_by(Cluster_3, Shape) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Shape, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+custom_labels <- c(
+  "cordiform" = "cordiform",
+  "cylindrical" = "cylindrical",
+  "nws" = "narrow working surface",
+  "other" = "other",
+  "rectangular" = "rectangular",
+  "triangular" = "triangular"
+)
+uni_core_shape <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Shape)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+ scale_fill_manual(values = brewer.pal(n = length(custom_labels), "Set3"),
+                    labels = custom_labels) +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.049, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+uni_core_shape
+ggsave("Figures/SI/S57-uni_core_shape.png", plot = uni_core_shape, width = 12, height = 8)
+```
+__Chi Square Test of shape differences between clusters__
+```{r}
+df_uni_s <- df_filtered %>%
+  filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Shape), Shape != "irregular", Shape != "other", Shape != "indeterminate")
+data_counts <- df_uni_s %>%
+  group_by(Cluster_3, Shape) %>%
+  summarize(count = n(), .groups = 'drop') %>%
+  mutate(Cluster_3 = as.factor(Cluster_3), Shape = as.factor(Shape))
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Shape, fill = list(count = 0))
+print(contingency_table)
+contingency_table <- data_counts_complete %>%
+  select(Cluster_3, Shape, count) %>%
+  spread(key = Shape, value = count, fill = 0) %>%
+  column_to_rownames(var = "Cluster_3")
+contingency_table <- contingency_table[rowSums(contingency_table) > 0, colSums(contingency_table) > 0]
+chisq_test <- chisq.test(contingency_table)
+chisq_test
+```
+__Fisher's Exact Test__
+```{r}
+perform_fisher_posthoc <- function(pair) {
+  cluster1 <- pair[1]
+  cluster2 <- pair[2]
+  subset_table <- data_counts_complete %>%
+    filter(Cluster_3 %in% c(cluster1, cluster2)) %>%
+    select(Cluster_3, Shape, count) %>%
+    spread(key = Shape, value = count, fill = 0) %>%
+    column_to_rownames(var = "Cluster_3")
+  subset_table <- subset_table[rowSums(subset_table) > 0, colSums(subset_table) > 0]
+  if (nrow(subset_table) > 1 && ncol(subset_table) > 1) {
+    fisher_result <- fisher.test(subset_table, simulate.p.value = TRUE, B = 1e5)
+    tibble(
+      Cluster_1 = cluster1,
+      Cluster_2 = cluster2,
+      Fisher_p_value = fisher_result$p.value
+    )
+  } else {
+    tibble(
+      Cluster_1 = cluster1,
+      Cluster_2 = cluster2,
+      Fisher_p_value = NA
+    )
+  }
+}
+posthoc_results_fisher <- purrr::map_df(cluster_pairs, perform_fisher_posthoc)
+posthoc_results_fisher <- posthoc_results_fisher %>%
+  mutate(p_value_adjusted = p.adjust(Fisher_p_value, method = "bonferroni"))
+print(posthoc_results_fisher)
+```
+## Metric Analysis
+
+__Figure S58: Boxplot of uni core length by site__
+```{r}
+uni_core_length_site <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Length)),
+  aes(x = reorder(Site, desc(Max_Length), FUN = median), y = Max_Length, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max length (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+uni_core_length_site
+ggsave("Figures/SI/S58-uni_core_length_site.png", plot = uni_core_length_site, width = 12, height = 8)
+```
+__Figure S59: Boxplot of uni core length by cluster__
+```{r}
+uni_core_length_cluster <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Length)),
+              aes(x = as.factor(Cluster_3), y = Max_Length,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "max length (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+uni_core_length_cluster
+ggsave("Figures/SI/S59-uni_core_length_cluster.png", plot = uni_core_length_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's Test of uni core length__
+```{r}
+df_uni_L = df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Length))
+kruskal.test(Max_Length ~ as.factor(Cluster_3), data = df_uni_L)
+dunn.test(df_uni_L$Max_Length, df_uni_L$Cluster_3, method = "bonferroni")
+```
+__Figure S60: Boxplot of uni core width by site__
+```{r}
+uni_core_width_site <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Width)),
+  aes(x = reorder(Site, desc(Max_Width), FUN = median), y = Max_Width, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+uni_core_width_site
+ggsave("Figures/SI/S60-uni_core_width_site.png", plot = uni_core_width_site, width = 12, height = 8)
+```
+__Figure S61: Boxplot of uni core width by cluster__
+```{r}
+uni_core_width_cluster <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Width)),
+              aes(x = as.factor(Cluster_3), y = Max_Width,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "max width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+uni_core_width_cluster
+ggsave("Figures/SI/S61-uni_core_width_cluster.png", plot = uni_core_width_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's tests of uni core width__
+```{r}
+df_uni_W = df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Width))
+kruskal.test(Max_Width ~ as.factor(Cluster_3), data = df_uni_W)
+dunn.test(df_uni_W$Max_Width, df_uni_W$Cluster_3, method = "bonferroni")
+```
+__Figure S62: Boxplot of uni core thickness by site__
+```{r}
+uni_core_thick_site <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Thick)),
+  aes(x = reorder(Site, desc(Max_Thick), FUN = median), y = Max_Thick, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "midpoint thickness (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+uni_core_thick_site
+ggsave("Figures/SI/S62-uni_core_thick_site.png", plot = uni_core_thick_site, width = 12, height = 8)
+```
+__Figure S63: Boxplot of uni core thickness by cluster__
+```{r}
+uni_core_thick_cluster <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Thick)),
+              aes(x = as.factor(Cluster_3), y = Max_Thick,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "midpoint thickness (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+uni_core_thick_cluster
+ggsave("Figures/SI/S63-uni_core_thick_cluster.png", plot = uni_core_thick_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's tests of uni core thickness__
+```{r}
+df_uni_T = df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Thick))
+kruskal.test(Max_Thick ~ as.factor(Cluster_3), data = df_uni_T)
+dunn.test(df_uni_T$Max_Thick, df_uni_T$Cluster_3, method = "bonferroni")
+```
+__Figure S64: Boxplot of uni core Index of Flattening by site__
+```{r}
+uni_core_IF_site <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Index_F)),
+  aes(x = reorder(Site, desc(Index_F), FUN = median), y = Index_F, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "thickness / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+uni_core_IF_site
+ggsave("Figures/SI/S64-uni_core_IF_site.png", plot = uni_core_IF_site, width = 12, height = 8)
+```
+__Figure S65: Boxplot of uni core Index of Flattening by cluster__
+```{r}
+uni_core_IF_cluster <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Index_F)),
+              aes(x = as.factor(Cluster_3), y = Index_F,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "thickness / width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+uni_core_IF_cluster
+ggsave("Figures/SI/S65-uni_core_IF_cluster.png", plot = uni_core_IF_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's tests of uni core IF__
+```{r}
+df_uni_IF = df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Index_F))
+kruskal.test(Index_F ~ as.factor(Cluster_3), data = df_uni_IF)
+dunn.test(df_uni_IF$Index_F, df_uni_IF$Cluster_3, method = "bonferroni")
+```
+__Figure S66: Boxplot of uni core Index of Elongation by site__
+```{r}
+uni_core_IE_site <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Index_E)),
+  aes(x = reorder(Site, desc(Index_E), FUN = median), y = Index_E, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+uni_core_IE_site
+ggsave("Figures/SI/S66-uni_core_IE_site.png", plot = uni_core_IE_site, width = 12, height = 8)
+```
+__Figure S67: Boxplot of uni core Index of Elongation by cluster__
+```{r}
+uni_core_IE_cluster <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Index_E)),
+              aes(x = as.factor(Cluster_3), y = Index_E,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "length / width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+uni_core_IE_cluster
+ggsave("Figures/SI/S67-uni_core_IE_cluster.png", plot = uni_core_IE_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of uni core IE__
+```{r}
+df_uni_IE = df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Index_E))
+kruskal.test(Index_E ~ as.factor(Cluster_3), data = df_uni_IE)
+dunn.test(df_uni_IE$Index_E, df_uni_IE$Cluster_3, method = "bonferroni")
+```
+__Figure S68: uni core L x W scatterplot by cluster__
+```{r}
+slopes <- df_filtered %>%
+    filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Cluster_3) %>%
+    do(tidy(lm(Max_Length ~ Max_Width, data = .))) %>%
+    filter(term == "Max_Width") %>%
+    select(Cluster_3, estimate)
+label_positions <- df_filtered %>%
+     filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Cluster_3) %>%
+    summarize(
+        x = mean(Max_Width),
+        y = mean(Max_Length)
+    ) %>%
+    left_join(slopes, by = "Cluster_3")
+uni_core_LW_scatter <- ggplot(
+    df_filtered %>%  filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Max_Length), !is.na(Max_Width)),
+    aes(x = Max_Width, y = Max_Length, color = as.factor(Cluster_3))
+) +
+    geom_point(size = 0.9, alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, linetype = "dashed", size = 1.2) +
+    geom_text(
+        data = label_positions,
+        aes(x = x + 35, y = y - 10, label = paste0("", round(estimate, 2), "")),
+        hjust = 0.0, vjust = 0.0,
+        show.legend = FALSE
+    ) +
+    labs(
+        x = "width (mm)",
+        y = "length (mm)",
+        color = "Cluster",
+    ) +
+    scale_color_brewer(palette = "Paired") +
+    theme_minimal() +
+    theme(
+        legend.title = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.position = "right",
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17),
+        axis.title.x = element_text(size = 17),
+    )
+uni_core_LW_scatter
+ggsave("Figures/SI/S68-uni_core_LW_scatter.png", plot = uni_core_LW_scatter, width = 12, height = 8)
+```
+__Figure 13: Boxplot of uni core geometric mean by site__
+```{r}
+uni_core_geo_mean_site <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Geo_Mean)),
+  aes(x = reorder(Site, desc(Geo_Mean), FUN = median), y = Geo_Mean, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "geometric mean (mm)",
+      fill = "Cluster") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+uni_core_geo_mean_site
+ggsave("Figures/MS/13-uni_core_geo_mean_site.png", plot = uni_core_geo_mean_site, width = 12, height = 8)
+```
+__Figure S69: Boxplot of uni core geometric mean by cluster__
+```{r}
+uni_core_geo_mean_cluster <- ggplot(df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Geo_Mean)),
+              aes(x = as.factor(Cluster_3), y = Geo_Mean,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "geometric mean (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+uni_core_geo_mean_cluster
+ggsave("Figures/SI/S69-uni_core_geo_mean_cluster.png", plot = uni_core_geo_mean_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis & Dunn's Tests of uni core geo mean__
+```{r}
+df_UGM = df_filtered %>% filter(Art_Type %in% c("uni_blade", "uni_flake"), !is.na(Geo_Mean))
+kruskal.test(Geo_Mean ~ as.factor(Cluster_3), data = df_UGM)
+dunn.test(df_UGM$Geo_Mean, df_UGM$Cluster_3, method = "bonferroni")
+```
+# Debitage
+
+## Metric Analysis
+
+__Figure S70: debitage L x W scatterplot by site
+```{r}
+slopes <- df_filtered %>%
+    filter(Art_Class == "debitage", !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Site) %>%
+    do(tidy(lm(Max_Length ~ Max_Width, data = .))) %>%
+    filter(term == "Max_Width") %>%
+    select(Site, estimate)
+label_positions <- df_filtered %>%
+    filter(Art_Class == "debitage", !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Site) %>%
+    summarize(
+        x = mean(Max_Width),
+        y = mean(Max_Length)
+    ) %>%
+    left_join(slopes, by = "Site")
+debitage_LW_scatter_site <- ggplot(
+    df_filtered %>% filter(Art_Class == "debitage", !is.na(Max_Length), !is.na(Max_Width)),
+    aes(x = Max_Width, y = Max_Length, color = as.factor(Site))
+) +
+    geom_point(size = 1.1, alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, linetype = "dashed", size = 1.2) +
+    geom_text(
+        data = label_positions,
+        aes(x = x + 30, y = y, label = paste0("", round(estimate, 2), "")),
+        hjust = 0, vjust = -0.5,
+        show.legend = FALSE
+    ) +
+    labs(
+        x = "width (mm)",
+        y = "length (mm)",
+        color = "Site",
+    ) +
+    scale_color_brewer(palette = "Set3") +
+    theme_minimal() +
+    theme(
+        legend.title = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.position = "right",
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17),
+        axis.title.x = element_text(size = 17),
+    )
+debitage_LW_scatter_site
+ggsave("Figures/SI/S70-debitage_LW_scatter_site.png", plot = debitage_LW_scatter_site, width = 12, height = 8)
+```
+
+__Figure S71: debitage L x W scatterplot by cluster__
+```{r}
+slopes <- df_filtered %>%
+    filter(Art_Class == "debitage", !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Cluster_3) %>%
+    do(tidy(lm(Max_Length ~ Max_Width, data = .))) %>%
+    filter(term == "Max_Width") %>%
+    select(Cluster_3, estimate)
+label_positions <- df_filtered %>%
+    filter(Art_Class == "debitage", !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Cluster_3) %>%
+    summarize(
+        x = mean(Max_Width),
+        y = mean(Max_Length)
+    ) %>%
+    left_join(slopes, by = "Cluster_3")
+debitage_LW_scatter_cluster <- ggplot(
+    df_filtered %>% filter(Art_Class == "debitage", !is.na(Max_Length), !is.na(Max_Width)),
+    aes(x = Max_Width, y = Max_Length, color = as.factor(Cluster_3))
+) +
+    geom_point(size = 1.1, alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, linetype = "dashed", size = 1.2) +
+    geom_text(
+        data = label_positions,
+        aes(x = x + 30, y = y, label = paste0("", round(estimate, 2), "")),
+        hjust = 0, vjust = -0.5,
+        show.legend = FALSE
+    ) +
+    labs(
+        x = "width (mm)",
+        y = "length (mm)",
+        color = "Cluster",
+    ) +
+    scale_color_manual(values = c("I" = "#A6CEE3", "II" = "#1F78B4", "III" = "#B2DF8A")) +
+    theme_minimal() +
+    theme(
+        legend.title = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.position = "right",
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17),
+        axis.title.x = element_text(size = 17),
+    )
+debitage_LW_scatter_cluster
+ggsave("Figures/SI/S71-debitage_LW_scatter_cluster.png", plot = debitage_LW_scatter_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of debitage IE__
+```{r}
+df_deb_IE = df_filtered %>% filter(Art_Class == "debitage", !is.na(Index_E))
+kruskal.test(Index_E ~ as.factor(Cluster_3), data = df_deb_IE)
+dunn.test(df_deb_IE$Index_E, df_deb_IE$Cluster_3, method = "bonferroni")
+```
+# Nubian Points
+
+## Descriptive Statistics
+
+__Table S8: Nubian point  descriptive statistics by site__
+```{r}
+df_point_lev <- df_filtered %>%
+  filter(Art_Type_Sub == "point_Lev")
+descriptive_stats_length_site <- df_point_lev %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Length, na.rm = TRUE),
+    sd = sd(Max_Length, na.rm = TRUE),
+    min = min(Max_Length, na.rm = TRUE),
+    max = max(Max_Length, na.rm = TRUE)
+  )
+descriptive_stats_width_site <- df_point_lev %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Width, na.rm = TRUE),
+    sd = sd(Max_Width, na.rm = TRUE),
+    min = min(Max_Width, na.rm = TRUE),
+    max = max(Max_Width, na.rm = TRUE)
+  )
+descriptive_stats_thickness_site <- df_point_lev %>%
+  group_by(Site) %>%
+  summarize(
+    mean = mean(Max_Thick, na.rm = TRUE),
+    sd = sd(Max_Thick, na.rm = TRUE),
+    min = min(Max_Thick, na.rm = TRUE),
+    max = max(Max_Thick, na.rm = TRUE)
+  )
+kable(descriptive_stats_length_site, caption = "Descriptive Statistics for Max Length by Site")
+kable(descriptive_stats_width_site, caption = "Descriptive Statistics for Max Width by Site")
+kable(descriptive_stats_thickness_site, caption = "Descriptive Statistics for Max Thickness by Site")
+```
+__Table S9: Nubian point descriptive statistics by cluster__
+```{r}
+descriptive_stats_length_cluster <- df_point_lev %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Length, na.rm = TRUE),
+    sd = sd(Max_Length, na.rm = TRUE),
+    min = min(Max_Length, na.rm = TRUE),
+    max = max(Max_Length, na.rm = TRUE)
+  )
+descriptive_stats_width_cluster <- df_point_lev %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Width, na.rm = TRUE),
+    sd = sd(Max_Width, na.rm = TRUE),
+    min = min(Max_Width, na.rm = TRUE),
+    max = max(Max_Width, na.rm = TRUE)
+  )
+descriptive_stats_thickness_cluster <- df_point_lev %>%
+  group_by(Cluster_3) %>%
+  summarize(
+    mean = mean(Max_Thick, na.rm = TRUE),
+    sd = sd(Max_Thick, na.rm = TRUE),
+    min = min(Max_Thick, na.rm = TRUE),
+    max = max(Max_Thick, na.rm = TRUE)
+  )
+kable(descriptive_stats_length_cluster, caption = "Descriptive Statistics for Max Length by Cluster_3")
+kable(descriptive_stats_width_cluster, caption = "Descriptive Statistics for Max Width by Cluster_3")
+kable(descriptive_stats_thickness_cluster, caption = "Descriptive Statistics for Max Thickness by Cluster_3")
+```
+
+## Metric Analysis
+
+### Nubian Point Metrics
+
+__Figure S72: Boxplot of Nubian point length by site__
+```{r}
+lp_length_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Max_Length)),
+  aes(x = reorder(Site, desc(Max_Length), FUN = median), y = Max_Length, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max length (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+lp_length_site
+ggsave("Figures/SI/S72-lp_length_site.png", plot = lp_length_site, width = 12, height = 8)
+```
+__Figure S73: Boxplot of Nubian point length by cluster__
+```{r}
+lp_length_cluster <- ggplot(df_filtered %>% filter(!is.na(Max_Length), Art_Type_Sub == "point_Lev"),
+              aes(x = as.factor(Cluster_3), y = Max_Length,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "max length (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+lp_length_cluster
+ggsave("Figures/SI/S73-lp_length_cluster.png", plot = lp_length_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's test of Nubian point length__
+```{r}
+df_lp_L = df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Max_Length))
+kruskal.test(Max_Length ~ as.factor(Cluster_3), data = df_lp_L)
+dunn.test(df_lp_L$Max_Length, df_lp_L$Cluster_3, method = "bonferroni")
+```
+__Figure S74: Boxplot of Nubian point width by site__
+```{r}
+lp_width_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Max_Width)),
+  aes(x = reorder(Site, desc(Max_Width), FUN = median), y = Max_Width, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+lp_width_site
+ggsave("Figures/SI/S74-lp_width_site.png", plot = lp_width_site, width = 12, height = 8)
+```
+__Figure S75: Boxplot of Nubian point width by cluster__
+```{r}
+lp_width_cluster <- ggplot(df_filtered %>% filter(!is.na(Max_Width), Art_Type_Sub == "point_Lev"),
+  aes(x = as.factor(Cluster_3), y = Max_Width,
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "max width (mm)",
+      fill="Cluster_3",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+lp_width_cluster
+ggsave("Figures/SI/S75-lp_width_cluster.png", plot = lp_width_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of Nubian point width__
+```{r}
+df_lp_W = df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Max_Width))
+kruskal.test(Max_Width ~ as.factor(Cluster_3), data = df_lp_W)
+```
+__Figure S76: Boxplot of Nubian point thickness by site__
+```{r}
+lp_thick_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Max_Thick)),
+  aes(x = reorder(Site, desc(Max_Thick), FUN = median), y = Max_Thick, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "midpoint thickness (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+lp_thick_site
+ggsave("Figures/SI/S76-lp_thick_site.png", plot = lp_thick_site, width = 12, height = 8)
+```
+__Figure S77: Boxplot of Nubian point thickness by cluster__
+```{r}
+lp_thick_cluster <- ggplot(df_filtered %>% filter(!is.na(Max_Thick), Art_Type_Sub == "point_Lev"),
+              aes(x = as.factor(Cluster_3), y = Max_Thick,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "midpoint thickness (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+lp_thick_cluster
+ggsave("Figures/SI/S77-lp_thick_cluster.png", plot = lp_thick_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of Nubian point thickness__
+```{r}
+df_lp_T = df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Max_Thick))
+kruskal.test(Max_Thick ~ as.factor(Cluster_3), data = df_lp_T)
+```
+__Figure S78: Boxplot of Nubian point Index of Flattening by site__
+```{r}
+lp_IF_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Index_F)),
+  aes(x = reorder(Site, desc(Index_F), FUN = median), y = Index_F, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "thickness / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+lp_IF_site
+ggsave("Figures/SI/S78-lp_IF_site.png", plot = lp_IF_site, width = 12, height = 8)
+```
+__Figure S79: Boxplot of Nubian point Index of Flattening by cluster__
+```{r}
+lp_IF_cluster <- ggplot(df_filtered %>% filter(!is.na(Index_F), Art_Type_Sub == "point_Lev"),
+              aes(x = as.factor(Cluster_3), y = Index_F,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "thickness / width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+lp_IF_cluster
+ggsave("Figures/SI/S79-lp_IF_cluster.png", plot = lp_IF_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of Nubian point IF__
+```{r}
+df_lp_IF = df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Index_F))
+kruskal.test(Index_F ~ as.factor(Cluster_3), data = df_lp_IF)
+```
+__Figure S80: Boxplot of Nubian point Index of Elongation by site__
+```{r}
+lp_IE_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Index_E)),
+  aes(x = reorder(Site, desc(Index_E), FUN = median), y = Index_E, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+lp_IE_site
+ggsave("Figures/SI/S80-lp_IE_site.png", plot = lp_IE_site, width = 12, height = 8)
+```
+__Figure S81: Boxplot of Nubian point Index of Elongation by cluster__
+```{r}
+lp_IE_cluster <- ggplot(df_filtered %>% filter(!is.na(Index_E), Art_Type_Sub == "point_Lev"),
+              aes(x = as.factor(Cluster_3), y = Index_E,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "length / width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+lp_IE_cluster
+ggsave("Figures/SI/S81-lp_IE_cluster.png", plot = lp_IE_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's Tests of Nubian point IE__
+```{r}
+df_lp_IE = df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Index_E))
+kruskal.test(Index_E ~ as.factor(Cluster_3), data = df_lp_IE)
+dunn.test(df_lp_IE$Index_E, df_lp_IE$Cluster_3, method = "bonferroni")
+```
+__Figure S82: Nubian point L x W scatterplot by cluster__
+```{r}
+slopes <- df_filtered %>%
+    filter(Art_Type_Sub == "point_Lev", !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Cluster_3) %>%
+    do(tidy(lm(Max_Length ~ Max_Width, data = .))) %>%
+    filter(term == "Max_Width") %>%
+    select(Cluster_3, estimate)
+label_positions <- df_filtered %>%
+    filter(Art_Type_Sub == "point_Lev", !is.na(Max_Length), !is.na(Max_Width)) %>%
+    group_by(Cluster_3) %>%
+    summarize(
+        x = mean(Max_Width),
+        y = mean(Max_Length)
+    ) %>%
+    left_join(slopes, by = "Cluster_3")
+lp_LW_scatter <- ggplot(
+    df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Max_Length), !is.na(Max_Width)),
+    aes(x = Max_Width, y = Max_Length, color = as.factor(Cluster_3))
+) +
+    geom_point(size = 0.9, alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, linetype = "dashed", size = 1.2) +
+    geom_text(
+        data = label_positions,
+        aes(x = x + 13, y = y, label = paste0("", round(estimate, 2), "")),
+        hjust = 0, vjust = -0.5,
+        show.legend = FALSE
+    ) +
+    labs(
+        x = "width (mm)",
+        y = "length (mm)",
+        color = "Cluster",
+    ) +
+    scale_color_brewer(palette = "Paired") +
+    theme_minimal() +
+    theme(
+        legend.title = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.position = "right",
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17),
+        axis.title.x = element_text(size = 17),
+    )
+lp_LW_scatter
+ggsave("Figures/SI/S82-lp_LW_scatter.png", plot = lp_LW_scatter, width = 12, height = 8)
+```
+__Figure S83: Boxplot of Nubian point geometric mean by site__
+```{r}
+lp_geo_mean_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Geo_Mean)),
+  aes(x = reorder(Site, desc(Geo_Mean), FUN = median), y = Geo_Mean, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "geometric mean (mm)",
+      fill = "Cluster") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+lp_geo_mean_site
+ggsave("Figures/SI/S83-lp_geo_mean_site.png", plot = lp_geo_mean_site, width = 12, height = 8)
+```
+__Figure 15: Boxplot of Nubian point geometric mean by cluster__
+```{r}
+lp_geo_mean_cluster <- ggplot(df_filtered %>% filter(!is.na(Geo_Mean), Art_Type_Sub == "point_Lev"),
+              aes(x = as.factor(Cluster_3), y = Geo_Mean,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "geometric mean (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+lp_geo_mean_cluster
+ggsave("Figures/MS/15-lp_geo_mean_cluster.png", plot = lp_geo_mean_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis & Dunn's tests of Nubian point geo mean__
+```{r}
+df_lp_GM = df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(Geo_Mean))
+kruskal.test(Geo_Mean ~ as.factor(Cluster_3), data = df_lp_GM)
+dunn.test(df_lp_GM$Geo_Mean, df_lp_GM$Cluster_3, method = "bonferroni")
+```
+### Tip Cross-Section
+
+__Figure S84: Boxplot of Nubian point TCSA by site__
+```{r}
+lp_TCSA_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(TCSA)),
+  aes(x = reorder(Site, desc(TCSA), FUN = median), y = TCSA, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "TCSA (mm)",
+      fill = "Cluster") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+lp_TCSA_site
+ggsave("Figures/SI/S84-lp_TCSA_site.png", plot = lp_TCSA_site, width = 12, height = 8)
+```
+__Figure S85: Boxplot of Nubian point TCSA by cluster__
+```{r}
+lp_TCSA_cluster <- ggplot(df_filtered %>% filter(!is.na(TCSA), Art_Type_Sub == "point_Lev"),
+              aes(x = as.factor(Cluster_3), y = TCSA,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "TCSA (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+lp_TCSA_cluster
+ggsave("Figures/SI/S85-lp_TCSA_cluster.png", plot = lp_TCSA_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of Nubian point TCSA__
+```{r}
+df_TCSA = df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(TCSA))
+kruskal.test(TCSA ~ as.factor(Cluster_3), data = df_TCSA)
+```
+__Figure S86: Boxplot of Nubian point TCSP by site__
+```{r}
+lp_TCSP_site <- ggplot(df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(TCSP)),
+  aes(x = reorder(Site, desc(TCSP), FUN = median), y = TCSP, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "TCSP (mm)",
+      fill = "Cluster") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+lp_TCSP_site
+ggsave("Figures/SI/S86-lp_TCSP_site.png", plot = lp_TCSP_site, width = 12, height = 8)
+```
+__Figure S87: Boxplot of Nubian point TCSP by cluster__
+```{r}
+lp_TCSP_cluster <- ggplot(df_filtered %>% filter(!is.na(TCSP), Art_Type_Sub == "point_Lev"),
+              aes(x = as.factor(Cluster_3), y = TCSP,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "TCSP (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+lp_TCSP_cluster
+ggsave("Figures/SI/S87-lp_TCSP_cluster.png", plot = lp_TCSP_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of Nubian point TCSP__
+```{r}
+df_TCSP = df_filtered %>% filter(Art_Type_Sub == "point_Lev", !is.na(TCSA))
+kruskal.test(TCSP ~ as.factor(Cluster_3), data = df_TCSP)
+```
+### Preferential Scar Metrics
+
+__Figure S88: Boxplot of preferential scar length by site__
+```{r}
+ls_length_site <- ggplot(df_filtered %>% filter(!is.na(Lev_Scar_Length)),
+  aes(x = reorder(Site, desc(Lev_Scar_Length), FUN = median), y = Lev_Scar_Length, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "scar length (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+ls_length_site
+ggsave("Figures/SI/S88-ls_length_site.png", plot = ls_length_site, width = 12, height = 8)
+```
+__Figure S89: Boxplot of preferential scar length by cluster__
+```{r}
+ls_length_cluster <- ggplot(df_filtered %>% filter(!is.na(Lev_Scar_Length)),
+              aes(x = as.factor(Cluster_3), y = Lev_Scar_Length,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "scar length (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+ls_length_cluster
+ggsave("Figures/SI/S89-ls_length_cluster.png", plot = ls_length_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's test of preferential scar length__
+```{r}
+df_ls_L = df_filtered %>% filter(!is.na(Lev_Scar_Length))
+kruskal.test(Lev_Scar_Length ~ as.factor(Cluster_3), data = df_ls_L)
+dunn.test(df_ls_L$Lev_Scar_Length, df_ls_L$Cluster_3, method = "bonferroni")
+```
+__Figure S90: Boxplot of preferential scar width by site__
+```{r}
+ls_width_site <- ggplot(df_filtered %>% filter(!is.na(Lev_Scar_Width)),
+  aes(x = reorder(Site, desc(Lev_Scar_Width), FUN = median), y = Lev_Scar_Width,
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "scar width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+lp_width_site
+ggsave("Figures/SI/S90-ls_width_site.png", plot = ls_width_site, width = 12, height = 8)
+```
+__Figure S91: Boxplot of preferential scar width by cluster__
+```{r}
+ls_width_cluster <- ggplot(df_filtered %>% filter(!is.na(Lev_Scar_Width)),
+  aes(x = as.factor(Cluster_3), y = Lev_Scar_Width,
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "max width (mm)",
+      fill="Cluster_3",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+ls_width_cluster
+ggsave("Figures/SI/S91-ls_width_cluster.png", plot = ls_width_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of preferential scar width__
+```{r}
+df_ls_W = df_filtered %>% filter(!is.na(Lev_Scar_Width))
+kruskal.test(Lev_Scar_Width ~ as.factor(Cluster_3), data = df_ls_W)
+dunn.test(df_ls_W$Lev_Scar_Width, df_ls_W$Cluster_3, method = "bonferroni")
+```
+__Figure S92: Boxplot of preferential scar Index of Elongation by site__
+```{r}
+ls_IE_site <- ggplot(df_filtered %>% filter(!is.na(Lev_Scar_Index_E)),
+  aes(x = reorder(Site, desc(Lev_Scar_Index_E), FUN = median), y = Lev_Scar_Index_E, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+ls_IE_site
+ggsave("Figures/SI/S92-ls_IE_site.png", plot = ls_IE_site, width = 12, height = 8)
+```
+__Figure S93: Boxplot of preferential scar Index of Elongation by cluster__
+```{r}
+ls_IE_cluster <- ggplot(df_filtered %>% filter(!is.na(Lev_Scar_Index_E)),
+              aes(x = as.factor(Cluster_3), y = Index_E,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "length / width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+ls_IE_cluster
+ggsave("Figures/SI/S93-ls_IE_cluster.png", plot = ls_IE_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's Tests of preferential scar IE__
+```{r}
+df_ls_IE = df_filtered %>% filter(!is.na(Lev_Scar_Index_E))
+kruskal.test(Lev_Scar_Index_E ~ as.factor(Cluster_3), data = df_ls_IE)
+dunn.test(df_ls_IE$Lev_Scar_Index_E, df_ls_IE$Cluster_3, method = "bonferroni")
+```
+__Figure S94: Preferential scar L x W scatterplot by cluster__
+```{r}
+slopes <- df_filtered %>%
+    filter(!is.na(Lev_Scar_Length), !is.na(Lev_Scar_Width)) %>%
+    group_by(Cluster_3) %>%
+    do(tidy(lm(Lev_Scar_Length ~ Lev_Scar_Width, data = .))) %>%
+    filter(term == "Lev_Scar_Width") %>%
+    select(Cluster_3, estimate)
+label_positions <- df_filtered %>%
+    filter(!is.na(Lev_Scar_Length), !is.na(Lev_Scar_Width)) %>%
+    group_by(Cluster_3) %>%
+    summarize(
+        x = mean(Lev_Scar_Width),
+        y = mean(Lev_Scar_Length)
+    ) %>%
+    left_join(slopes, by = "Cluster_3")
+ls_LW_scatter <- ggplot(
+    df_filtered %>% filter(!is.na(Lev_Scar_Length), !is.na(Lev_Scar_Width)),
+    aes(x = Lev_Scar_Width, y = Lev_Scar_Length, color = as.factor(Cluster_3))
+) +
+    geom_point(size = 0.9, alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, linetype = "dashed", size = 1.2) +
+    geom_text(
+        data = label_positions,
+        aes(x = x + 15, y = y, label = paste0("", round(estimate, 2), "")),
+        hjust = 0, vjust = -0.5,
+        show.legend = FALSE
+    ) +
+    labs(
+        x = "width (mm)",
+        y = "length (mm)",
+        color = "Cluster",
+    ) +
+    scale_color_brewer(palette = "Paired") +
+    theme_minimal() +
+    theme(
+        legend.title = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.position = "right",
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17),
+        axis.title.x = element_text(size = 17),
+    )
+ls_LW_scatter
+ggsave("Figures/SI/S94-ls_LW_scatter.png", plot = ls_LW_scatter, width = 12, height = 8)
+```
+__Figure S95: Boxplot of preferential scar size by site__
+```{r}
+ls_s_site <- ggplot(df_filtered %>% filter(!is.na(Lev_Scar_Size)),
+  aes(x = reorder(Site, desc(Lev_Scar_Size), FUN = median), y = Lev_Scar_Size, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length x width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+ls_s_site
+ggsave("Figures/SI/S95-ls_s_site.png", plot = ls_s_site, width = 12, height = 8)
+```
+__Figure S96: Boxplot of preferential scar size by cluster__
+```{r}
+ls_s_cluster <- ggplot(df_filtered %>% filter(!is.na(Lev_Scar_Size)),
+              aes(x = as.factor(Cluster_3), y = Index_E,
+                  fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = .5) +
+  labs(x = "", y = "length x width (mm)",
+       fill="Cluster_3",
+       title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+ls_s_cluster
+ggsave("Figures/SI/S96-ls_s_cluster.png", plot = ls_s_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis and Dunn's Tests of preferential scar size__
+```{r}
+df_ls_s = df_filtered %>% filter(!is.na(Lev_Scar_Size))
+kruskal.test(Lev_Scar_Size ~ as.factor(Cluster_3), data = df_ls_s)
+dunn.test(df_ls_s$Lev_Scar_Size, df_ls_s$Cluster_3, method = "bonferroni")
+```
+### Comparison of Nubian points versus preferential scars
+
+__Figure S97: Boxplots of point vs. scar length by cluster__
+```{r}
+df_combined <- df_filtered %>%
+  filter((!is.na(Lev_Scar_Length) & Art_Type == "Lev_Nub") | 
+         (!is.na(Max_Length) & Art_Type_Sub == "point_Lev")) %>%
+  pivot_longer(cols = c(Lev_Scar_Length, Max_Length), names_to = "Variable", values_to = "Value") %>%
+  filter(!is.na(Value)) %>%
+  mutate(Variable = case_when(
+    Variable == "Lev_Scar_Length" ~ "scar length",
+    Variable == "Max_Length" ~ "point length"
+  ))
+point_vs_scar_length <- ggplot(df_combined, aes(x = Variable, y = Value, fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length (mm)",
+       fill = "Cluster_3",
+       ) +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(hjust = 1, size = 13, angle = 45),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 13),
+    strip.text = element_text(size = 17, face = "bold")
+  ) +
+  facet_grid(. ~ Cluster_3)
+print(point_vs_scar_length)
+ggsave("Figures/SI/S97-point_vs_scar_length.png", plot = point_vs_scar_length, width = 12, height = 8)
+```
+__Kruskal Wallis test of Nubian point versus scar length__ 
+```{r}
+df_combined <- df_filtered %>%
+  filter((!is.na(Lev_Scar_Length) & Art_Type == "Lev_Nub") | 
+         (!is.na(Max_Length) & Art_Type_Sub == "point_Lev")) %>%
+  pivot_longer(cols = c(Lev_Scar_Length, Max_Length), names_to = "Variable", values_to = "Value") %>%
+  filter(!is.na(Value)) %>%
+  mutate(Variable = case_when(
+    Variable == "Lev_Scar_Length" ~ "scar length",
+    Variable == "Max_Length" ~ "point length"
+  ))
+
+results <- df_combined %>%
+  group_by(Cluster_3) %>%
+  summarise(
+    kruskal_test = list(kruskal.test(Value ~ Variable, data = cur_data()))
+  )
+results$kruskal_test
+```
+__Figure S98: Boxplots of point vs. scar width by cluster__
+```{r}
+df_combined <- df_filtered %>%
+  filter((!is.na(Lev_Scar_Width) & Art_Type == "Lev_Nub") | 
+         (!is.na(Max_Width) & Art_Type_Sub == "point_Lev")) %>%
+  pivot_longer(cols = c(Lev_Scar_Width, Max_Width), names_to = "Variable", values_to = "Value") %>%
+  filter(!is.na(Value)) %>%
+  mutate(Variable = case_when(
+    Variable == "Lev_Scar_Width" ~ "scar width",
+    Variable == "Max_Width" ~ "point width"
+  ))
+point_vs_scar_width <- ggplot(df_combined, aes(x = Variable, y = Value, fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "width (mm)",
+       fill = "Cluster_3",
+       ) +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(hjust = 1, size = 13, angle = 45),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 13),
+    strip.text = element_text(size = 17, face = "bold")
+  ) +
+  facet_grid(. ~ Cluster_3)
+print(point_vs_scar_width)
+ggsave("Figures/SI/S98-point_vs_scar_width.png", plot = point_vs_scar_width, width = 12, height = 8)
+```
+__Kruskal Wallis tests of point versus scar width__ 
+```{r}
+df_combined <- df_filtered %>%
+  filter((!is.na(Lev_Scar_Width) & Art_Type == "Lev_Nub") | 
+         (!is.na(Max_Width) & Art_Type_Sub == "point_Lev")) %>%
+  pivot_longer(cols = c(Lev_Scar_Width, Max_Width), names_to = "Variable", values_to = "Value") %>%
+  filter(!is.na(Value)) %>%
+  mutate(Variable = case_when(
+    Variable == "Lev_Scar_Width" ~ "scar width",
+    Variable == "Max_Width" ~ "point width"
+  ))
+results <- df_combined %>%
+  group_by(Cluster_3) %>%
+  summarise(
+    kruskal_test = list(kruskal.test(Value ~ Variable, data = cur_data()))
+  )
+results$kruskal_test
+```
+__Figure 17: Boxplots of point vs. scar size by cluster__
+```{r}
+df_combined <- df_filtered %>%
+  filter((!is.na(Lev_Scar_Size) & Art_Type == "Lev_Nub") | 
+         (!is.na(Size) & Art_Type_Sub == "point_Lev")) %>%
+  pivot_longer(cols = c(Lev_Scar_Size, Size), names_to = "Variable", values_to = "Value") %>%
+  filter(!is.na(Value)) %>%
+  mutate(Variable = case_when(
+    Variable == "Lev_Scar_Size" ~ "scar size",
+    Variable == "Size" ~ "point size"
+  ))
+point_vs_scar_size <- ggplot(df_combined, aes(x = Variable, y = Value, fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length x width (mm)",
+       fill = "Cluster_3",
+       ) +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(hjust = 1, size = 13, angle = 45),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 13),
+    strip.text = element_text(size = 17, face = "bold")
+  ) +
+  facet_grid(. ~ Cluster_3)
+point_vs_scar_size
+ggsave("Figures/MS/17-point_vs_scar_size.png", plot = point_vs_scar_size, width = 12, height = 8)
+```
+__Kruskal Wallis tests of point versus scar size__
+```{r}
+df_combined <- df_filtered %>%
+  filter((!is.na(Lev_Scar_Size) & Art_Type == "Lev_Nub") | 
+         (!is.na(Size) & Art_Type_Sub == "point_Lev")) %>%
+  pivot_longer(cols = c(Lev_Scar_Size, Size), names_to = "Variable", values_to = "Value") %>%
+  filter(!is.na(Value)) %>%
+  mutate(Variable = case_when(
+    Variable == "Lev_Scar_Size" ~ "scar size",
+    Variable == "Size" ~ "point size"
+  ))
+results <- df_combined %>%
+  group_by(Cluster_3) %>%
+  summarise(
+    kruskal_test = list(kruskal.test(Value ~ Variable, data = cur_data()))
+  )
+results$kruskal_test
+```
+__Figure 17b: Boxplots of point vs. scar size by cluster w/o TH.69__
+```{r}
+df_combined <- df_filtered %>%
+  filter((!is.na(Lev_Scar_Size) & Art_Type == "Lev_Nub" & Site != "TH069") | 
+         (!is.na(Size) & Art_Type_Sub == "point_Lev" & Site != "TH069")) %>%
+  pivot_longer(cols = c(Lev_Scar_Size, Size), names_to = "Variable", values_to = "Value") %>%
+  filter(!is.na(Value)) %>%
+  mutate(Variable = case_when(
+    Variable == "Lev_Scar_Size" ~ "scar size",
+    Variable == "Size" ~ "point size"
+  ))
+point_vs_scar_size_no69 <- ggplot(df_combined, aes(x = Variable, y = Value, fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length x width (mm)",
+       fill = "Cluster_3",
+       ) +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(hjust = 1, size = 13, angle = 45),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 13),
+    strip.text = element_text(size = 17, face = "bold")
+  ) +
+  facet_grid(. ~ Cluster_3)
+point_vs_scar_size_no69
+```
+# Tools
+
+## Types
+
+__Table S10: Data table of tool types by site__ 
+```{r}
+result <- df_filtered %>%
+  filter(!is.na(Tool_Type)) %>%
+  group_by(Site, Tool_Type) %>%
+  summarise(Count = n(), .groups = 'drop') %>%
+  mutate(Percentage = Count / sum(Count) * 100) %>%
+  mutate(Count_Percentage = paste0(Count, " (", round(Percentage, 2), "%)")) %>%
+  select(Site, Tool_Type, Count_Percentage)
+pivot_result <- result %>%
+  arrange(Tool_Type) %>%
+  pivot_wider(names_from = Site, values_from = Count_Percentage, values_fill = "-") %>%
+  select(Tool_Type, order(as.numeric(gsub("[^0-9]", "", names(.)))))
+kable(pivot_result, caption = "Tool Types by Site")
+```
+__Table 3: Data table of tool types by cluster__ 
+```{r}
+result_cluster <- df_filtered %>%
+  filter(!is.na(Tool_Type)) %>%
+  group_by(Cluster_3, Tool_Type) %>%
+  summarise(Count = n(), .groups = 'drop') %>%
+  group_by(Cluster_3) %>% 
+  mutate(Percentage = Count / sum(Count) * 100) %>%
+  mutate(Count_Percentage = paste0(Count, " (", round(Percentage, 1), "%)")) %>%
+  select(Cluster_3, Tool_Type, Count_Percentage)
+pivot_result_cluster <- result_cluster %>%
+  arrange(Tool_Type) %>%
+  pivot_wider(
+    names_from = Cluster_3,
+    values_from = Count_Percentage,
+    values_fill = "-"
+  ) %>%
+  select(Tool_Type, `I`, `II`, `III`) 
+pivot_result_cluster
+kable(pivot_result_cluster, caption = "Tool Types by Cluster")
+```
+__Figure S99: Bar plots of retouched tool counts per site (no Nubian blanks)__
+```{r}
+df_ret_tool_counts <- df_filtered %>%
+  filter(Art_Class == "tool", !is.na(Patination), Art_Type != "biface", Tool_Type != "Levallois_blank")
+count_table <- df_ret_tool_counts %>%
+  group_by(Site, Tool_Type) %>%
+  summarize(count = n(), .groups = 'drop')
+percentage_table <- count_table %>%
+  group_by(Site) %>%
+  mutate(percentage = (count / sum(count)) * 100)
+ret_tool_counts_site <- ggplot(percentage_table, aes(x = factor(Site), y = percentage, fill = Tool_Type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_bar(stat = "identity", position = "stack") +
+   geom_text(
+    aes(label = ifelse(percentage > 4.9, paste0(round(percentage, 1), "%\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  labs(x = "", y = "Percentage", fill = "Tool Type") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 17, angle = 45, hjust = 1, face = "bold"),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  ) +
+  scale_fill_brewer(palette = "Set3")
+ret_tool_counts_site
+ggsave("Figures/SI/S99-ret_tool_counts_site.png", plot = ret_tool_counts_site, width = 12, height = 8)
+```
+__Figure S100: Bar plot of retouched tool counts per cluster__
+```{r}
+df_ret_tool_counts <- df_filtered %>%
+  filter(Art_Class == "tool", !is.na(Patination), Art_Type != "biface", Tool_Type != "Levallois_blank")
+count_table <- df_ret_tool_counts %>%
+  group_by(Cluster_3, Tool_Type) %>%
+  summarize(count = n(), .groups = 'drop')
+percentage_table <- count_table %>%
+  group_by(Cluster_3) %>%
+  mutate(percentage = (count / sum(count)) * 100)
+ret_tool_counts_cluster <- ggplot(percentage_table, aes(x = factor(Cluster_3), y = percentage, fill = Tool_Type)) +
+  geom_bar(stat = "identity", position = "stack") +
+  geom_bar(stat = "identity", position = "stack") +
+   geom_text(
+    aes(label = ifelse(percentage > 4.9, paste0(round(percentage, 1), "%\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3.5
+  ) +
+  labs(x = "", y = "Percentage", fill = "Tool Type") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 17, hjust = 1, face = "bold"),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  ) +
+  scale_fill_brewer(palette = "Set3")
+ret_tool_counts_cluster
+ggsave("Figures/SI/S100-ret_tool_counts_cluster.png", plot = ret_tool_counts_cluster, width = 12, height = 8)
+```
+## Blank Selection
+
+__Figure S101: Bar plots of retouched tool blank selection count per site__
+```{r}
+df_toolblankcounts <- df_filtered %>%
+  filter(Art_Class == "tool", Art_Type != "indeterm", Tool_Type != "Levallois_blank", Art_Type != "biface")
+count_table <- df_toolblankcounts %>%
+  group_by(Site, Art_Type) %>%
+  summarize(count = n(), .groups = 'drop')
+percentage_table <- count_table %>%
+  group_by(Site) %>%
+  mutate(percentage = (count / sum(count)) * 100)
+tool_blank_counts_site <- ggplot(percentage_table, aes(x = factor(Site), y = percentage, fill = Art_Type)) +
+  geom_bar(stat = "identity", position = "stack") +
+   geom_text(
+    aes(label = ifelse(percentage > 4.9, paste0(round(percentage, 1), "%\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3.5
+  ) +
+  labs(x = "", y = "Percentage", fill = "Blank Type") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(size = 17, angle = 45, hjust = 1, face = "bold"),
+    axis.title.y = element_text(size = 17),
+    legend.position = "right",
+    axis.text.y = element_text(size = 13),
+    legend.text = element_text(size = 13),
+    legend.title = element_text(size = 17)
+  ) +
+  scale_fill_brewer(palette = "Set3")
+tool_blank_counts_site
+ggsave("Figures/SI/S101-tool_blank_counts_site.png", plot = tool_blank_counts_site, width = 12, height = 8)
+```
+__Figure 16: Pie charts of retouched tool blank selection by cluster__
+```{r}
+df_ret_tool_blank_counts <- df_filtered %>%
+  filter(Art_Class == "tool", Art_Type != "indeterm", Tool_Type != "Levallois_blank", Art_Type != "biface")
+data_counts <- df_ret_tool_blank_counts %>%
+  group_by(Cluster_3, Art_Type) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_complete <- data_counts %>%
+  complete(Cluster_3, Art_Type, fill = list(count = 0))
+data_counts_complete <- data_counts_complete %>%
+  group_by(Cluster_3) %>%
+  mutate(proportion = count / sum(count))
+ret_tool_blank_counts_cluster <- ggplot(data_counts_complete, aes(x = "", y = proportion, fill = Art_Type)) +
+  geom_bar(stat = "identity", width = 1, color = "black") +
+  coord_polar(theta = "y") +
+  facet_wrap(~ Cluster_3) +
+  theme_void() +
+ scale_fill_brewer(palette = "Set3")  +
+  labs(title = "", fill = "") +
+  geom_text(
+    aes(label = ifelse(proportion > 0.049, paste0(scales::percent(proportion, accuracy = 1), "\n(", count, ")"), "")),
+    position = position_stack(vjust = 0.5),
+    size = 3
+  ) +
+  theme(
+    plot.title = element_text(hjust = .5),
+    legend.text = element_text(size = 13),   
+    legend.position = "bottom",
+    strip.text = element_text(size = 15, face = "bold")
+  )
+ret_tool_blank_counts_cluster
+ggsave("Figures/MS/16-ret_tool_blank_counts_cluster.png", plot = ret_tool_blank_counts_cluster, width = 12, height = 8)
+```
+__Chi Square Test of differences between clusters__
+```{r}
+df_ret_tool_blank_counts <- df_filtered %>%
+  filter(Art_Class == "tool", Art_Type != "indeterm", Tool_Type != "Levallois_blank", Art_Type != "biface")
+data_counts_tool <- df_ret_tool_blank_counts %>%
+  group_by(Cluster_3, Art_Type) %>%
+  summarize(count = n(), .groups = 'drop')
+data_counts_tool_complete <- data_counts_tool %>%
+  complete(Cluster_3, Art_Type, fill = list(count = 0))
+contingency_table <- data_counts_tool_complete %>%
+  select(Cluster_3, Art_Type, count) %>%
+  spread(key = Art_Type, value = count, fill = 0) %>%
+  column_to_rownames(var = "Cluster_3")
+print(contingency_table)
+chisq_test <- chisq.test(contingency_table)
+chisq_test
+```
+__Fisher's Exact Test__
+```{r}
+clusters <- unique(df_ret_tool_blank_counts$Cluster_3)
+cluster_pairs <- combn(clusters, 2, simplify = FALSE)
+perform_fisher_posthoc <- function(pair) {
+  cluster1 <- pair[1]
+  cluster2 <- pair[2]
+  subset_table <- data_counts_tool_complete %>%
+    filter(Cluster_3 %in% c(cluster1, cluster2)) %>%
+    select(Cluster_3, Art_Type, count) %>%
+    spread(key = Art_Type, value = count, fill = 0) %>%
+    column_to_rownames(var = "Cluster_3")
+  if (nrow(subset_table) > 0 && ncol(subset_table) > 0) {
+    fisher_result <- fisher.test(subset_table)
+    p_value <- fisher_result$p.value
+  } else {
+    p_value <- NA
+  }
+  fisher_result <- fisher.test(subset_table)
+  tibble(
+    Cluster_1 = cluster1,
+    Cluster_2 = cluster2,
+    Fisher_p_value = fisher_result$p.value,
+    p_value_adjusted = p.adjust(fisher_result$p.value, method = "bonferroni")
+  )
+}
+posthoc_results_fisher <- purrr::map_df(cluster_pairs, perform_fisher_posthoc)
+print(posthoc_results_fisher)
+```
+## Metric Analysis
+
+__Figure S102: Boxplot of retouched tool length by site__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Max_Length), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_length_site <- ggplot(filtered_data, aes(x = reorder(Site, desc(Max_Length), FUN = median), y = Max_Length, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max length (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+ret_tool_length_site
+ggsave("Figures/SI/S102-ret_tool_length_site.png", plot = ret_tool_length_site, width = 12, height = 8)
+```
+__Figure S103: Boxplot of retouched tool length by cluster__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Max_Length), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_length_cluster <- ggplot(filtered_data, aes(x = Cluster_3, y = Max_Length, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max length (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+ret_tool_length_cluster
+ggsave("Figures/SI/S103-ret_tool_length_cluster.png", plot = ret_tool_length_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of retouched tool length__
+```{r}
+df_rt_L = df_filtered %>% filter(Art_Class == "tool", !is.na(Max_Length), Tool_Type != "Levallois_blank", Art_Type != "biface")
+kruskal.test(Max_Thick ~ as.factor(Cluster_3), data = df_rt_L)
+```
+__Figure S104: Boxplot of retouched tool width by site__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Max_Width), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_width_site <- ggplot(filtered_data, aes(x = reorder(Site, desc(Max_Width), FUN = median), y = Max_Width, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+ret_tool_width_site
+ggsave("Figures/SI/S104-ret_tool_width_site.png", plot = ret_tool_width_site, width = 12, height = 8)
+```
+__Figure S105: Boxplot of retouched tool width by cluster__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Max_Width), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_width_cluster <- ggplot(filtered_data, aes(x = Cluster_3, y = Max_Width,
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "max width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+ret_tool_width_cluster
+ggsave("Figures/SI/S105-ret_tool_width_cluster.png", plot = ret_tool_width_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of retouched tool width__
+```{r}
+df_rt_W = df_filtered %>% filter(Art_Class == "tool", !is.na(Max_Width), Tool_Type != "Levallois_blank", Art_Type != "biface")
+kruskal.test(Max_Width ~ as.factor(Cluster_3), data = df_rt_W)
+dunn.test(df_rt_W$Max_Width, df_rt_W$Cluster_3, method = "bonferroni")
+```
+__Figure S106: Boxplot of retouched tool thickness by site__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Max_Thick), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_thick_site <- ggplot(filtered_data, aes(x = reorder(Site, desc(Max_Thick), FUN = median), y = Max_Thick, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "midpoint thickess (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+ret_tool_thick_site
+ggsave("Figures/SI/S106-ret_tool_thick_site.png", plot = ret_tool_thick_site, width = 12, height = 8)
+```
+__Figure S107: Boxplot of retouched tool thickness by cluster__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Max_Thick), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_thick_cluster <- ggplot(filtered_data, aes(x = Cluster_3, y = Max_Thick,
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "midpoint thickness (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+ret_tool_thick_cluster
+ggsave("Figures/SI/S107-ret_tool_thick_cluster.png", plot = ret_tool_thick_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of retouched tool thickness__
+```{r}
+df_rt_T = df_filtered %>% filter(Art_Class == "tool", !is.na(Max_Thick), Tool_Type != "Levallois_blank", Art_Type != "biface")
+kruskal.test(Max_Thick ~ as.factor(Cluster_3), data = df_rt_T)
+```
+__Figure S108: Boxplot of retouched tool Index of Flattening by site__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Index_F), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_IF_site <- ggplot(filtered_data, aes(x = reorder(Site, desc(Index_F), FUN = median), y = Index_F, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "thickness / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+ret_tool_IF_site
+ggsave("Figures/SI/S108-ret_tool_IF_site.png", plot = ret_tool_IF_site, width = 12, height = 8)
+```
+__Figure S109: Boxplot of retouched tool Index of Flattening by cluster__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Index_F), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_IF_cluster <- ggplot(filtered_data, aes(x = Cluster_3, y = Index_F,
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "thickness / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+ret_tool_IF_cluster
+ggsave("Figures/SI/S109-ret_tool_IF_cluster.png", plot = ret_tool_IF_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of retouched tool IF__
+```{r}
+df_rt_IF = df_filtered %>% filter(Art_Class == "tool", !is.na(Max_Width), Tool_Type != "Levallois_blank", Art_Type != "biface")
+kruskal.test(Index_F ~ as.factor(Cluster_3), data = df_rt_IF)
+```
+__Figure S110: Boxplot of retouched tool Index of Elongation by site__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Index_E), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_IE_site <- ggplot(filtered_data, aes(x = reorder(Site, desc(Index_E), FUN = median), y = Index_E, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+ret_tool_IE_site
+ggsave("Figures/SI/S110-ret_tool_IE_site.png", plot = ret_tool_IE_site, width = 12, height = 8)
+```
+__Figure S111: Boxplot of retouched tool Index of Elongation by cluster__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Index_E), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_IE_cluster <- ggplot(filtered_data, aes(x = Cluster_3, y = Index_E,
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "length / width (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+ret_tool_IE_cluster
+ggsave("Figures/SI/S111-ret_tool_IE_cluster.png", plot = ret_tool_IE_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis test of uni core IE__
+```{r}
+df_rt_IE = df_filtered %>% filter(Art_Class == "tool", !is.na(Index_E), Tool_Type != "Levallois_blank", Art_Type != "biface")
+kruskal.test(Index_E ~ as.factor(Cluster_3), data = df_rt_IE)
+dunn.test(df_rt_IE$Index_E, df_rt_IE$Cluster_3, method = "bonferroni")
+```
+__Figure S112: retouched tool L x W scatterplot by cluster__
+```{r}
+slopes <- df_filtered %>%
+    filter(Art_Class == "tool", !is.na(Max_Width), !is.na(Max_Length), Tool_Type != "Levallois_blank", Art_Type != "biface") %>%
+    group_by(Cluster_3) %>%
+    nest() %>%
+    mutate(model = map(data, ~ lm(Max_Length ~ Max_Width, data = .x)),
+           tidied = map(model, tidy)) %>%
+    unnest(tidied) %>%
+    filter(term == "Max_Width") %>%
+    select(Cluster_3, estimate)
+label_positions <- df_filtered %>%
+    filter(Art_Class == "tool", !is.na(Max_Width), !is.na(Max_Length), Tool_Type != "Levallois_blank", Art_Type != "biface") %>%
+    group_by(Cluster_3) %>%
+    summarize(
+        x = mean(Max_Width),
+        y = mean(Max_Length)
+    ) %>%
+    left_join(slopes, by = "Cluster_3")
+ret_tool_LW_scatter <- ggplot(
+    df_filtered %>% filter(Art_Class == "tool", !is.na(Max_Width), !is.na(Max_Length), Tool_Type != "Levallois_blank", Art_Type != "biface"),
+    aes(x = Max_Width, y = Max_Length, color = as.factor(Cluster_3))
+) +
+    geom_point(size = 1.1, alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, linetype = "dashed", size = 1.2) +
+    geom_text(
+        data = label_positions,
+        aes(x = x, y = y, label = paste0("", round(estimate, 2), "")),
+        hjust = -5.2, vjust = 0.0,
+        show.legend = FALSE
+    ) +
+    labs(
+        x = "width (mm)",
+        y = "length (mm)",
+        color = "Cluster"
+    ) +
+    scale_color_brewer(palette = "Paired") +
+    theme_minimal() +
+    theme(
+        legend.title = element_text(size = 17),
+        legend.text = element_text(size = 15),
+        legend.position = "right",
+        axis.text.x = element_text(size = 13),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17),
+        axis.title.x = element_text(size = 17)
+    )
+ret_tool_LW_scatter
+ggsave("Figures/SI/S112-ret_tool_LW_scatter.png", plot = ret_tool_LW_scatter, width = 12, height = 8)
+```
+__Figure S113: Boxplot of retouched tool geometric mean by site__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Geo_Mean), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_GM_site <- ggplot(filtered_data, aes(x = reorder(Site, desc(Geo_Mean), FUN = median), y = Geo_Mean, 
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "geometric mean (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.title = element_text(size = 17),
+    legend.text = element_text(size = 13),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 17, face = "bold"),
+    axis.text.y = element_text(size = 13),
+    axis.title.y = element_text(size = 17)
+    )
+ret_tool_GM_site
+ggsave("Figures/SI/S113-ret_tool_GM_site.png", plot = ret_tool_GM_site, width = 12, height = 8)
+```
+__Figure S114: Boxplot of retouched tool geometric mean by cluster__
+```{r}
+filtered_data <- df_filtered %>% 
+  filter(Art_Class == "tool", !is.na(Geo_Mean), Tool_Type != "Levallois_blank", Art_Type != "biface")
+ret_tool_GM_cluster <- ggplot(filtered_data, aes(x = Cluster_3, y = Geo_Mean,
+      fill = as.factor(Cluster_3))) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = 0.1, size = 0.5) +
+  labs(x = "", y = "geometric mean (mm)",
+      fill = "Cluster",
+      title = "") +
+  scale_fill_brewer(palette = "Paired") +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+        axis.text.x = element_text(hjust = 1, size = 17, face = "bold"),
+        axis.text.y = element_text(size = 13),
+        axis.title.y = element_text(size = 17)
+    )
+ret_tool_GM_cluster
+ggsave("Figures/SI/S114-ret_tool_GM_cluster.png", plot = ret_tool_GM_cluster, width = 12, height = 8)
+```
+__Kruskal Wallis & Dunn's Tests of retouched tool geo mean__
+```{r}
+df_rt_GM = df_filtered %>%  filter(Art_Class == "tool", !is.na(Geo_Mean), Tool_Type != "Levallois_blank", Art_Type != "biface")
+kruskal.test(Geo_Mean ~ as.factor(Cluster_3), data = df_rt_GM)
+dunn.test(df_rt_GM$Geo_Mean, df_rt_GM$Cluster_3, method = "bonferroni")
+```
