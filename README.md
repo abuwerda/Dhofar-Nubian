@@ -5,17 +5,17 @@
 [![minimal R version](https://img.shields.io/badge/R%3E%3D-3.2.4-brightgreen.svg)](https://cran.r-project.org/) 
 [![Licence](https://img.shields.io/github/license/mashape/apistatus.svg)](http://choosealicense.com/licenses/mit/)
 
-# The Dhofar Nubian Tradition: Technological miniaturization in the late Middle Stone Age of southern Arabia
+# Lithic miniaturization and technological innovation on the Southern Dispersal Route out of Africa
 
 This repository contains the data and code for our paper:
 
-> Jeffrey Ian Rose, Vitaly I. Usyk, Michelle R. Bebber, Amir Beshkani, Nuno Bicho, João Cascalheira, Dominik Chlachula, Metin I. Eren, Roman Garba, Li Li, Ali Al Mahrooqi, Muati Al Muati, Osama Samawi, Anthony E. Marks, (2025). *The Dhofar Nubian Tradition: Technological miniaturization in the late Middle Stone Age of southern Arabia*
+> Jeffrey Ian Rose, Vitaly I. Usyk, Michelle R. Bebber, Amir Beshkani, Nuno Bicho, João Cascalheira, Dominik Chlachula, Metin I. Eren, Roman Garba, Ali Al Mahrooqi, Muati Al Muati, Osama Samawi, Anthony E. Marks, (2025). *Lithic miniaturization and technological innovation on the Southern Dispersal Route out of Africa*
 
 ### How to cite
 
 Please cite this compendium as:
 
-> Jeffrey Ian Rose, Vitaly I. Usyk, Michelle R. Bebber, Amir Beshkani, Nuno Bicho, João Cascalheira, Dominik Chlachula, Metin I. Eren, Roman Garba, Li Li, Ali Al Mahrooqi, Muati Al Muati, Osama Samawi, Anthony E. Marks, (2025). *Compendium of R code and data for The Dhofar Nubian Tradition: Technological miniaturization in the late Middle Stone Age of southern Arabia*. Online at <https://doi.org/xxx/xxx>
+> Jeffrey Ian Rose, Vitaly I. Usyk, Michelle R. Bebber, Amir Beshkani, Nuno Bicho, João Cascalheira, Dominik Chlachula, Metin I. Eren, Roman Garba, Ali Al Mahrooqi, Muati Al Muati, Osama Samawi, Anthony E. Marks, (2025). *Compendium of R code and data for *Lithic miniaturization and technological innovation on the Southern Dispersal Route out of Africa*. Online at <https://doi.org/xxx/xxx>
 
 ## Contents
 
